@@ -88,3 +88,12 @@ def test_generate_top10_is_deterministic_and_sorted(fate):
 def test_generate_fixed_first_and_avoid(fate):
     res = generator.generate(16, 0, fate, generator.Options(top_n=5, fixed_first='冠', avoid_chars=frozenset('宇')))
     assert res and all(c.c1.char == '冠' and c.c2.char != '宇' for c in res)
+
+
+def test_generate_per_first_char_diversity(fate):
+    res = generator.generate(16, 0, fate, generator.Options(top_n=10, per_first_char=2))
+    assert len(res) == 10
+    firsts = [c.c1.char for c in res]
+    assert max(firsts.count(ch) for ch in set(firsts)) <= 2
+    totals = [c.total for c in res]
+    assert totals == sorted(totals, reverse=True)

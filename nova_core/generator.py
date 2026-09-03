@@ -33,6 +33,7 @@ class Options:
     fixed_first: str | None = None         # 指定第一字（輩字）
     fixed_second: str | None = None        # 指定第二字
     top_n: int = 10
+    per_first_char: int = 0                # >0：同一第一字在結果中最多出現次數（多樣性）；0 不限制
     min_stroke: int = 1
     max_stroke: int = MAX_STROKE
 
@@ -183,9 +184,11 @@ def generate(l1: int, l2: int, fate: FateData | None, opt: Options) -> list[Cand
             out.append(p)
         return out
 
+    # 多樣性過濾需要較大的候選池；池大小固定以保證 Python/JS 一致
+    k = max(opt.top_n * 10, 200) if opt.per_first_char > 0 else opt.top_n
     heap: list[tuple[tuple, Candidate]] = []
     for combo in combos:
-        if len(heap) >= opt.top_n:
+        if len(heap) >= k:
             bound = total_of(_MAX_WENHUA, _MAX_WUXING, _MAX_SHENGXIAO, combo.wuge_score, _MAX_YINYUN)
             if bound < heap[0][0][0]:
                 continue
@@ -198,8 +201,25 @@ def generate(l1: int, l2: int, fate: FateData | None, opt: Options) -> list[Cand
                 scores = fast_scores(a, b, combo, fate)
                 total = total_of(*scores)
                 key = _heap_key(total, a.c, b.c)
-                if len(heap) < opt.top_n:
+                if len(heap) < k:
                     heapq.heappush(heap, (key, Candidate(a.c, b.c, combo, scores, total, grade(total))))
                 elif key > heap[0][0]:
                     heapq.heapreplace(heap, (key, Candidate(a.c, b.c, combo, scores, total, grade(total))))
-    return sorted((c for _, c in heap), key=_sort_key)
+    ranked = sorted((c for _, c in heap), key=_sort_key)
+    return diversify(ranked, opt.top_n, opt.per_first_char)
+
+
+def diversify(ranked: list[Candidate], top_n: int, per_first_char: int) -> list[Candidate]:
+    """依排名貪婪取前 top_n，同一第一字最多 per_first_char 次（0 不限制）。"""
+    if per_first_char <= 0:
+        return ranked[:top_n]
+    out: list[Candidate] = []
+    seen: dict[str, int] = {}
+    for c in ranked:
+        if seen.get(c.c1.char, 0) >= per_first_char:
+            continue
+        seen[c.c1.char] = seen.get(c.c1.char, 0) + 1
+        out.append(c)
+        if len(out) >= top_n:
+            break
+    return out

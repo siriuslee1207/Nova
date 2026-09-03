@@ -1,0 +1,39 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nova parity（JS ↔ Python）</title>
+<style>
+  body { font: 14px/1.5 system-ui, "Noto Sans TC", sans-serif; margin: 2rem; color: #222; }
+  .ok { color: #1a7f37; font-weight: 600; } .bad { color: #b42318; font-weight: 600; }
+  pre { background: #f6f7f9; padding: .75rem; overflow: auto; font-size: 12px; }
+</style>
+<h1>Nova parity：JS 引擎 vs Python 參考實作</h1>
+<p>雙擊開啟即跑；資料來自 <code>tests/fixtures/golden.gen.js</code>（由 <code>tools/gen_fixtures.py</code> 產生）。</p>
+<div id="summary">執行中…</div>
+<div id="fails"></div>
+<script src="../data/gen/tables.gen.js"></script>
+<script src="../data/gen/chars.gen.js"></script>
+<script src="../src/vendor/lunar.js"></script>
+<script src="../src/js/core/wuge.js"></script>
+<script src="../src/js/core/dayan.js"></script>
+<script src="../src/js/core/sancai.js"></script>
+<script src="../src/js/core/yinyun.js"></script>
+<script src="../src/js/core/chars.js"></script>
+<script src="../src/js/core/rating.js"></script>
+<script src="../src/js/core/bazi.js"></script>
+<script src="../src/js/core/generator.js"></script>
+<script src="parity_core.js"></script>
+<script src="fixtures/golden.gen.js"></script>
+<script>
+  const t0 = performance.now();
+  const res = NovaParity.run(NOVA_GOLDEN, Nova);
+  const ms = Math.round(performance.now() - t0);
+  const ok = res.fails.length === 0;
+  document.getElementById('summary').innerHTML =
+    `<span class="${ok ? 'ok' : 'bad'}">${res.pass}/${res.total} pass</span> in ${ms} ms — golden ${NOVA_GOLDEN.meta.generated}, chars ${NOVA_GOLDEN.meta.chars_generated}`;
+  const box = document.getElementById('fails');
+  for (const f of res.fails.slice(0, 20)) {
+    const pre = document.createElement('pre');
+    pre.textContent = `[${f.section}] input=${JSON.stringify(f.input)}\nexpect=${JSON.stringify(f.expect).slice(0, 800)}\ngot   =${JSON.stringify(f.got).slice(0, 800)}`;
+    box.appendChild(pre);
+  }
+</script>

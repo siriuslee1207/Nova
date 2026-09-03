@@ -54,6 +54,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument('--level', type=int, choices=[1, 2, 3], default=2,
                    help='字集：1 僅常見取名用字、2 含常用字（預設）、3 含次常用字')
     p.add_argument('--top', type=int, default=10)
+    p.add_argument('--per-first', type=int, default=2, help='同一第一字最多出現次數（0 不限制，預設 2）')
     p.add_argument('--avoid', default='', help='排除字，如 死病')
     p.add_argument('--require', default='', help='名字至少含其一的字')
     p.add_argument('--first', help='指定第一字（輩字）')
@@ -133,7 +134,7 @@ def main(argv: list[str] | None = None) -> None:
     female = args.female_caution if args.female_caution is not None else (args.gender == 'girl')
     opt = Options(strictness=args.strictness, exclude_female_caution=female, max_level=args.level,
                   avoid_chars=frozenset(args.avoid), require_chars=frozenset(args.require),
-                  fixed_first=args.first, fixed_second=args.second, top_n=args.top)
+                  fixed_first=args.first, fixed_second=args.second, top_n=args.top, per_first_char=args.per_first)
     results = generate(l1, l2, fate, opt)
     if args.json:
         out = [{'rank': i + 1, 'name': surname + c.name, 'total': c.total, 'grade': c.grade,

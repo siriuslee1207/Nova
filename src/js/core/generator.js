@@ -8,8 +8,22 @@
     return {
       strictness: 'moderate', zongAccept: Nova.dayan.LUCKY_ACCEPT_DEFAULT, excludeFemaleCaution: false,
       maxLevel: 2, avoidChars: new Set(), requireChars: new Set(), fixedFirst: null, fixedSecond: null,
-      topN: 10, minStroke: 1, maxStroke: Nova.wuge.MAX_STROKE,
+      topN: 10, perFirstChar: 0, minStroke: 1, maxStroke: Nova.wuge.MAX_STROKE,
     };
+  }
+
+  // 依排名貪婪取前 topN，同一第一字最多 perFirstChar 次（0 不限制）
+  function diversify(ranked, topN, perFirstChar) {
+    if (perFirstChar <= 0) return ranked.slice(0, topN);
+    const out = [], seen = new Map();
+    for (const c of ranked) {
+      const n = seen.get(c.c1.char) || 0;
+      if (n >= perFirstChar) continue;
+      seen.set(c.c1.char, n + 1);
+      out.push(c);
+      if (out.length >= topN) break;
+    }
+    return out;
   }
 
   function luckyCombos(l1, l2, opt) {
@@ -107,8 +121,9 @@
       || x.c1.char.codePointAt(0) - y.c1.char.codePointAt(0) || x.c2.char.codePointAt(0) - y.c2.char.codePointAt(0));
   }
 
-  // onProgress(i, n) 每處理一個筆畫組合呼叫一次
-  function generate(l1, l2, fate, options, onProgress) {
+  // 可分批推進的一次產生：step(batch) 處理最多 batch 個筆畫組合，完成回 true；result() 取排名結果。
+  // generate()（同步）與 generateAsync()（每批讓出主執行緒）共用同一份邏輯，結果必然相同。
+  function createRun(l1, l2, fate, options, onProgress) {
     const opt = Object.assign(defaultOptions(), options || {});
     const R = Nova.rating;
     const combos = luckyCombos(l1, l2, opt).sort((a, b) => b.wugeScore - a.wugeScore);
@@ -130,27 +145,49 @@
       }
       return out;
     };
+    const k = opt.perFirstChar > 0 ? Math.max(opt.topN * 10, 200) : opt.topN; // 與 Python 一致
     const heap = new MinHeap();
-    combos.forEach((combo, i) => {
-      if (onProgress) onProgress(i, combos.length);
-      if (heap.size >= opt.topN) {
-        const bound = R.totalOf(MAX_WENHUA, MAX_WUXING, MAX_SHENGXIAO, combo.wugeScore, MAX_YINYUN);
-        if (bound < heap.top().key[0]) return;
-      }
-      const firsts = pres(combo.f1, opt.fixedFirst), seconds = pres(combo.f2, opt.fixedSecond);
-      for (const a of firsts) {
-        for (const b of seconds) {
-          if (opt.requireChars.size && !opt.requireChars.has(a.c.char) && !opt.requireChars.has(b.c.char)) continue;
-          const scores = fastScores(a, b, combo, fate);
-          const total = R.totalOf(scores[0], scores[1], scores[2], scores[3], scores[4]);
-          const key = heapKey(total, a.c, b.c);
-          if (heap.size < opt.topN) heap.push({ key, cand: { c1: a.c, c2: b.c, combo, scores, total, grade: R.grade(total) } });
-          else if (cmpKey(key, heap.top().key) > 0) heap.replaceTop({ key, cand: { c1: a.c, c2: b.c, combo, scores, total, grade: R.grade(total) } });
+    let i = 0;
+    function step(batch) {
+      const end = Math.min(combos.length, i + (batch || combos.length));
+      for (; i < end; i++) {
+        const combo = combos[i];
+        if (onProgress) onProgress(i, combos.length);
+        if (heap.size >= k) {
+          const bound = R.totalOf(MAX_WENHUA, MAX_WUXING, MAX_SHENGXIAO, combo.wugeScore, MAX_YINYUN);
+          if (bound < heap.top().key[0]) continue;
+        }
+        const firsts = pres(combo.f1, opt.fixedFirst), seconds = pres(combo.f2, opt.fixedSecond);
+        for (const a of firsts) {
+          for (const b of seconds) {
+            if (opt.requireChars.size && !opt.requireChars.has(a.c.char) && !opt.requireChars.has(b.c.char)) continue;
+            const scores = fastScores(a, b, combo, fate);
+            const total = R.totalOf(scores[0], scores[1], scores[2], scores[3], scores[4]);
+            const key = heapKey(total, a.c, b.c);
+            if (heap.size < k) heap.push({ key, cand: { c1: a.c, c2: b.c, combo, scores, total, grade: R.grade(total) } });
+            else if (cmpKey(key, heap.top().key) > 0) heap.replaceTop({ key, cand: { c1: a.c, c2: b.c, combo, scores, total, grade: R.grade(total) } });
+          }
         }
       }
-    });
-    return sortCandidates(heap.a.map((x) => x.cand));
+      return i >= combos.length;
+    }
+    const result = () => diversify(sortCandidates(heap.a.map((x) => x.cand)), opt.topN, opt.perFirstChar);
+    return { step, result, total: combos.length };
   }
 
-  Nova.generator = { DAYAN_NEED, defaultOptions, luckyCombos, precompute, fastScores, generate, sortCandidates };
+  // onProgress(i, n) 每處理一個筆畫組合呼叫一次
+  function generate(l1, l2, fate, options, onProgress) {
+    const run = createRun(l1, l2, fate, options, onProgress);
+    run.step();
+    return run.result();
+  }
+
+  async function generateAsync(l1, l2, fate, options, onProgress, batch) {
+    const run = createRun(l1, l2, fate, options, onProgress);
+    while (!run.step(batch || 6)) await new Promise((r) => setTimeout(r, 0));
+    return run.result();
+  }
+
+  Nova.generator = { DAYAN_NEED, defaultOptions, luckyCombos, precompute, fastScores, createRun, generate, generateAsync,
+    sortCandidates, diversify };
 })(globalThis.Nova = globalThis.Nova || {});
