@@ -1,0 +1,14 @@
+# data
+data/raw/
+data/gen/
+ref/
+dist/
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+# misc
+.DS_Store
+Thumbs.db

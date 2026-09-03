@@ -1,0 +1,43 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nova file:// spike</title>
+<pre id="out">running...</pre>
+<script src="../src/vendor/lunar.js"></script>
+<script>
+const out = document.getElementById('out');
+const lines = [];
+const log = (k, v) => { lines.push(k + ': ' + v); out.textContent = lines.join('\n'); };
+log('location', location.protocol);
+try { sessionStorage.setItem('nova_t', '1'); log('sessionStorage', 'ok ' + sessionStorage.getItem('nova_t')); } catch (e) { log('sessionStorage', 'FAIL ' + e); }
+try { localStorage.setItem('nova_t', '1'); log('localStorage', 'ok'); } catch (e) { log('localStorage', 'FAIL ' + e); }
+// A. Blob worker
+try {
+  const src = 'self.onmessage = e => { let s = 0; for (let i = 0; i < 1e6; i++) s += i % 7; postMessage({echo: e.data, s}); };';
+  const w = new Worker(URL.createObjectURL(new Blob([src], {type: 'text/javascript'})));
+  const t0 = performance.now();
+  w.onmessage = e => log('blob_worker', 'ok ' + JSON.stringify(e.data) + ' in ' + (performance.now() - t0).toFixed(1) + 'ms');
+  w.onerror = e => log('blob_worker', 'FAIL ' + e.message);
+  w.postMessage('ping');
+} catch (e) { log('blob_worker', 'FAIL ' + e); }
+// B. lunar.js
+try {
+  const solar = Solar.fromYmdHms(2026, 9, 3, 10, 30, 0);
+  const lunar = solar.getLunar();
+  const ec = lunar.getEightChar();
+  log('lunar', lunar.toString() + ' 生肖=' + lunar.getYearShengXiao() + ' 四柱=' + [ec.getYear(), ec.getMonth(), ec.getDay(), ec.getTime()].join(' ') +
+      ' 日主=' + ec.getDayGan() + ' 藏干月=' + ec.getMonthHideGan().join('/') + ' 納音日=' + ec.getDayNaYin() + ' 節氣前=' + lunar.getPrevJieQi(true).getName());
+  // month pillar switches at 節氣: 2026-02-03 vs 2026-02-04 (立春)
+  const a = Solar.fromYmdHms(2026, 2, 3, 12, 0, 0).getLunar().getEightChar();
+  const b = Solar.fromYmdHms(2026, 2, 4, 12, 0, 0).getLunar().getEightChar();
+  log('lichun_switch', a.getYear() + '/' + a.getMonth() + ' -> ' + b.getYear() + '/' + b.getMonth());
+} catch (e) { log('lunar', 'FAIL ' + e); }
+// C. Gemini CORS from Origin: null (fake key). Expect HTTP 400 JSON, not TypeError.
+const body = JSON.stringify({contents: [{role: 'user', parts: [{text: 'hi'}]}]});
+for (const ep of ['generateContent', 'streamGenerateContent?alt=sse']) {
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:' + ep;
+  fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json', 'x-goog-api-key': 'AQ.nova-fake-key'}, body})
+    .then(async r => { const t = await r.text(); let reason = ''; try { reason = JSON.parse(t).error.details.map(d => d.reason).join(','); } catch (_) {} log('gemini ' + ep, 'HTTP ' + r.status + ' reason=' + reason + ' body=' + t.slice(0, 120).replace(/\s+/g, ' ')); })
+    .catch(e => log('gemini ' + ep, 'FETCH_FAIL ' + e));
+}
+setTimeout(() => log('done', 'true'), 4000);
+</script>

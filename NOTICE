@@ -1,0 +1,27 @@
+Nova bundles or derives from the following third-party works:
+
+1. fate — https://github.com/babyname/fate
+   License: MIT, Copyright (c) 2017 godcong
+   Use: naming rules, scoring weights, 八十一數理 / 三才 tables and interpretation text
+   (transcribed and converted to Traditional Chinese by tools/transcribe_fate.py), and
+   resources/character.json as the base character dictionary (slimmed by tools/build_chars.py).
+
+2. lunar-javascript — https://github.com/6tail/lunar-javascript
+   License: MIT, Copyright (c) 2018 6tail
+   Use: src/vendor/lunar.js, inlined into dist/nova.html for 農曆 / 四柱 / 生肖.
+
+3. lunar_python — https://github.com/6tail/lunar-python
+   License: MIT, Copyright (c) 6tail
+   Use: Python reference implementation (nova_core/bazi.py); not shipped in the HTML.
+
+4. Unihan Database — https://www.unicode.org/charts/unihan.html
+   License: Unicode License v3 (https://www.unicode.org/license.txt)
+   Use: 康熙 radical/stroke (kRSKangXi), readings and definitions to validate and
+   supplement character data at build time.
+
+5. OpenCC (opencc-python-reimplemented) — https://github.com/yichen0831/opencc-python
+   License: Apache-2.0
+   Use: build-time Simplified → Taiwan Traditional conversion only; not shipped.
+
+Big5 常用/次常用 character ranges are used (via Python's built-in codec) to derive
+common-character levels; no Big5 table is redistributed.

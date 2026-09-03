@@ -1,0 +1,20 @@
+[project]
+name = "nova-naming"
+version = "0.1.0"
+description = "Nova — 繁體中文小孩取名工具：五格、三才、八字喜用、生肖、音韻評分。單檔 HTML 執行，Python 建置。"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+build = ["opencc-python-reimplemented>=0.1.7"]
+bazi = ["lunar_python>=1.4.8"]
+gemini = ["google-genai>=2.22,<3"]
+copilot = ["github-copilot-sdk>=1.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools]
+packages = ["nova_core", "nova_core.llm"]

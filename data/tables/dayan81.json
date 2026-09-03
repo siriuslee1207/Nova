@@ -1,0 +1,650 @@
+[
+ {
+  "number": 1,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "太極之數",
+  "comment": "太極之數，萬物開泰，生發無窮，利祿亨通。"
+ },
+ {
+  "number": 2,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "兩儀之數",
+  "comment": "兩儀之數，混沌未開，進退保守，志望難達。"
+ },
+ {
+  "number": 3,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "三才之數",
+  "comment": "三才之數，天地人和，大事大業，繁榮昌隆。"
+ },
+ {
+  "number": 4,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "四象之數",
+  "comment": "四象之數，待於生發，萬事慎重，不具營謀。"
+ },
+ {
+  "number": 5,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "五行之數",
+  "comment": "五行俱權，迴圈相生，圓通暢達，福祉無窮。"
+ },
+ {
+  "number": 6,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "六爻之數",
+  "comment": "六爻之數，發展變化，天賦美德，吉祥安泰。"
+ },
+ {
+  "number": 7,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "七政之數",
+  "comment": "七政之數，精悍嚴謹，天賦之力，吉星照耀。"
+ },
+ {
+  "number": 8,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "八卦之數",
+  "comment": "八卦之數，乾坎艮震，巽離坤兌，無窮無盡。"
+ },
+ {
+  "number": 9,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "大成之數",
+  "comment": "大成之數，蘊涵凶險，或成或敗，難以把握。"
+ },
+ {
+  "number": 10,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "終結之數",
+  "comment": "終結之數，雪暗飄零，偶或有成，回顧茫然。"
+ },
+ {
+  "number": 11,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "旱苗逢雨",
+  "comment": "萬物更新，調順發達，恢弘澤世，繁榮富貴。"
+ },
+ {
+  "number": 12,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "掘井無泉",
+  "comment": "無理之數，發展薄弱，雖生不足，難酬志向。"
+ },
+ {
+  "number": 13,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "春日牡丹",
+  "comment": "才藝多能，智謀奇略，忍柔當事，鳴奏大功。"
+ },
+ {
+  "number": 14,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "破兆",
+  "comment": "家庭緣薄，孤獨遭難，謀事不達，悲慘不測。"
+ },
+ {
+  "number": 15,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "福壽",
+  "comment": "福壽圓滿，富貴榮譽，涵養雅量，德高望重。"
+ },
+ {
+  "number": 16,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "厚重",
+  "comment": "厚過載德，安富尊榮，財官雙美，功成名就。"
+ },
+ {
+  "number": 17,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "剛強",
+  "comment": "權威剛強，突破萬難，如能容忍，必獲成功。"
+ },
+ {
+  "number": 18,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "鐵鏡重磨",
+  "comment": "權威顯達，博得名利，且養柔德，功成名就。"
+ },
+ {
+  "number": 19,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "多難",
+  "comment": "風雲蔽日，辛苦重來，雖有智謀，萬事挫折。"
+ },
+ {
+  "number": 20,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "屋下藏金",
+  "comment": "非業破運，災難重重，進退維谷，萬事難成。"
+ },
+ {
+  "number": 21,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": true,
+  "title": "明月中天",
+  "comment": "光風霽月，萬物確立，官運亨通，大搏名利。女性不宜此數。"
+ },
+ {
+  "number": 22,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "秋草逢霜",
+  "comment": "秋草逢霜，困難疾弱，雖出豪傑，人生波折。"
+ },
+ {
+  "number": 23,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": true,
+  "title": "壯麗",
+  "comment": "旭日東昇，壯麗壯觀，權威旺盛，功名榮達。女性不宜此數。"
+ },
+ {
+  "number": 24,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "掘藏得金",
+  "comment": "家門餘慶，金錢豐盈，白手成家，財源廣進。"
+ },
+ {
+  "number": 25,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "榮俊",
+  "comment": "資性英敏，才能奇特，克服傲慢，尚可成功。"
+ },
+ {
+  "number": 26,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "變怪",
+  "comment": "變怪之謎，英雄豪傑，波瀾重疊，而奏大功。"
+ },
+ {
+  "number": 27,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "增長",
+  "comment": "慾望無止，自我強烈，多受毀謗，尚可成功。"
+ },
+ {
+  "number": 28,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": true,
+  "title": "闊水浮萍",
+  "comment": "遭難之數，豪傑氣概，四海漂泊，終世浮躁。女性不宜此數。"
+ },
+ {
+  "number": 29,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "智謀",
+  "comment": "智謀優秀，財力歸集，名聞海內，成就大業。"
+ },
+ {
+  "number": 30,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "非運",
+  "comment": "沉浮不定，凶吉難變，若明若暗，大成大敗。"
+ },
+ {
+  "number": 31,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "春日花開",
+  "comment": "智勇得志，博得名利，統領眾人，繁榮富貴。"
+ },
+ {
+  "number": 32,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "寶馬金鞍",
+  "comment": "僥倖多望，貴人得助，財帛如裕，繁榮至上。"
+ },
+ {
+  "number": 33,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": true,
+  "title": "旭日升天",
+  "comment": "旭日升天，鸞鳳相會，名聞天下，隆昌至極。女性不宜此數。"
+ },
+ {
+  "number": 34,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "破家",
+  "comment": "破家之身，見識短小，辛苦遭逢，災禍至極。"
+ },
+ {
+  "number": 35,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "高樓望月",
+  "comment": "溫和平靜，智達通暢，文昌技藝，奏功洋洋。"
+ },
+ {
+  "number": 36,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "波瀾重疊",
+  "comment": "波瀾重疊，沉浮萬狀，俠肝義膽，捨己成仁。"
+ },
+ {
+  "number": 37,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "猛虎出林",
+  "comment": "權威顯達，熱誠忠信，宜著雅量，終身榮富。"
+ },
+ {
+  "number": 38,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "磨鐵成針",
+  "comment": "意志薄弱，刻意經營，才識不凡，技藝有成。"
+ },
+ {
+  "number": 39,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "富貴榮華",
+  "comment": "富貴榮華，財帛豐盈，暗藏險象，德澤四方。"
+ },
+ {
+  "number": 40,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "退安",
+  "comment": "智謀膽力，冒險投機，沉浮不定，退保平安。"
+ },
+ {
+  "number": 41,
+  "lucky": "吉",
+  "max_luck": true,
+  "female_caution": false,
+  "title": "有德",
+  "comment": "純陽獨秀，德高望重，和順暢達，博得名利。此數為最大好運數。"
+ },
+ {
+  "number": 42,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "寒蟬在柳",
+  "comment": "博識多能，精通世情，如能專心，尚可成功。"
+ },
+ {
+  "number": 43,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "散財破產",
+  "comment": "散財破產，諸事不遂，雖有智謀，財來財去。"
+ },
+ {
+  "number": 44,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "煩悶",
+  "comment": "破家亡身，暗藏慘淡，事不如意，亂世怪傑。"
+ },
+ {
+  "number": 45,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "順風",
+  "comment": "新生泰和，順風揚帆，智謀經緯，富貴繁榮。"
+ },
+ {
+  "number": 46,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "浪裡淘金",
+  "comment": "載寶沉舟，浪裡淘金，大難嚐盡，大功有成。"
+ },
+ {
+  "number": 47,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "點石成金",
+  "comment": "花開之象，萬事如意，禎祥吉慶，天賦幸福。"
+ },
+ {
+  "number": 48,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "古松立鶴",
+  "comment": "智謀兼備，德量榮達，威望成師，洋洋大觀。"
+ },
+ {
+  "number": 49,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "轉變",
+  "comment": "吉臨則吉，凶來則凶，轉凶為吉，配好三才。"
+ },
+ {
+  "number": 50,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "小舟入海",
+  "comment": "一成一敗，吉凶參半，先得庇廕，後遭悽慘。"
+ },
+ {
+  "number": 51,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "沉浮",
+  "comment": "盛衰交加，波瀾重疊，如能慎始，必獲成功。"
+ },
+ {
+  "number": 52,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "達眼",
+  "comment": "卓識達眼，先見之明，智謀超群，名利雙收。"
+ },
+ {
+  "number": 53,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "曲捲難星",
+  "comment": "外祥內患，外禍內安，先富後貧，先貧後富。"
+ },
+ {
+  "number": 54,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "石上栽花",
+  "comment": "石上栽花，難得有活，憂悶煩來，辛慘不絕。"
+ },
+ {
+  "number": 55,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "善惡",
+  "comment": "善善得惡，惡惡得善，吉到極限，反生凶險。"
+ },
+ {
+  "number": 56,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "浪裡行舟",
+  "comment": "歷盡艱辛，四周障礙，萬事齟齬，做事難成。"
+ },
+ {
+  "number": 57,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "日照春松",
+  "comment": "寒雪青松，夜鶯吟春，必遭一過，繁榮白事。"
+ },
+ {
+  "number": 58,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "晚行遇月",
+  "comment": "沉浮多端，先苦後甜，寬宏揚名，富貴繁榮。"
+ },
+ {
+  "number": 59,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "寒蟬悲風",
+  "comment": "寒蟬悲風，意志衰退，缺乏忍耐，苦難不休。"
+ },
+ {
+  "number": 60,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "無謀",
+  "comment": "無謀之人，漂泊不定，晦暝暗黑，動搖不安。"
+ },
+ {
+  "number": 61,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "牡丹芙蓉",
+  "comment": "牡丹芙蓉，花開富貴，名利雙收，定享天賦。"
+ },
+ {
+  "number": 62,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "衰敗",
+  "comment": "衰敗之象，內外不和，志望難達，災禍頻來。"
+ },
+ {
+  "number": 63,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "舟歸平海",
+  "comment": "富貴榮華，身心安泰，雨露惠澤，萬事亨通。"
+ },
+ {
+  "number": 64,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "非命",
+  "comment": "骨肉分離，孤獨悲愁，難得心安，做事不成。"
+ },
+ {
+  "number": 65,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "巨流歸海",
+  "comment": "天長地久，家運隆昌，福壽綿長，事事成就。"
+ },
+ {
+  "number": 66,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "巖頭步馬",
+  "comment": "進退維谷，艱難不堪，等待時機，一躍而起。"
+ },
+ {
+  "number": 67,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "順風通達",
+  "comment": "天賦幸運，四通八達，家道繁昌，富貴東來。"
+ },
+ {
+  "number": 68,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "順風吹帆",
+  "comment": "智慮周密，集眾信達，發明能智，拓展昂進。"
+ },
+ {
+  "number": 69,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "非業",
+  "comment": "非業非力，精神迫滯，災害交至，遍償痛苦。"
+ },
+ {
+  "number": 70,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "殘菊逢霜",
+  "comment": "殘菊逢霜，寂寞無礙，慘淡憂愁，晚景淒涼。"
+ },
+ {
+  "number": 71,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "石上金花",
+  "comment": "石上金花，內心勞苦，貫徹始終，定可昌隆。"
+ },
+ {
+  "number": 72,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "勞苦",
+  "comment": "榮苦相伴，陰雲覆月，外表吉祥，內實凶禍。"
+ },
+ {
+  "number": 73,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "無勇",
+  "comment": "盛衰交加，徒有高志，天王福祉，終世平安。"
+ },
+ {
+  "number": 74,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "殘菊經霜",
+  "comment": "殘菊經霜，秋葉寂寞，無能無智，辛苦繁多。"
+ },
+ {
+  "number": 75,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "退守",
+  "comment": "退守保吉，發跡甚遲，雖有吉象，無謀難成。"
+ },
+ {
+  "number": 76,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "離散",
+  "comment": "傾覆離散，骨肉分離，內外不和，雖勞無功。"
+ },
+ {
+  "number": 77,
+  "lucky": "半吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "半吉",
+  "comment": "家庭有悅，半吉半凶，能獲援護，陷落不幸。"
+ },
+ {
+  "number": 78,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "晚苦",
+  "comment": "禍福參半，先天智慧，中年發達，晚景困苦。"
+ },
+ {
+  "number": 79,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "雲頭望月",
+  "comment": "雲頭望月，身疲力盡，窮迫不伸，精神不定。"
+ },
+ {
+  "number": 80,
+  "lucky": "凶",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "遁吉",
+  "comment": "辛苦不絕，早入隱遁，安心立命，化凶轉吉。"
+ },
+ {
+  "number": 81,
+  "lucky": "吉",
+  "max_luck": false,
+  "female_caution": false,
+  "title": "萬物回春",
+  "comment": "最吉之數，還本歸元，吉祥重疊，富貴尊榮。"
+ }
+]

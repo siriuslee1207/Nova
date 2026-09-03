@@ -1,0 +1,515 @@
+{
+ "levels": {
+  "大凶": 1,
+  "凶": 2,
+  "凶多於吉": 3,
+  "吉凶參半": 4,
+  "中吉": 5,
+  "吉多於凶": 5,
+  "吉": 6,
+  "大吉": 7
+ },
+ "combos": {
+  "木木木": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "木木火": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "木木土": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "木木金": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "木木水": {
+   "verdict": "吉多於凶",
+   "level": 5
+  },
+  "木火木": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "木火火": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "木火土": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "木火金": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "木火水": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "木土木": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "木土火": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "木土土": {
+   "verdict": "吉",
+   "level": 6
+  },
+  "木土金": {
+   "verdict": "吉多於凶",
+   "level": 5
+  },
+  "木土水": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "木金木": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "木金火": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "木金土": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "木金金": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "木金水": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "木水木": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "木水火": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "木水土": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "木水金": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "木水水": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "火木木": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "火木火": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "火木土": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "火木金": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "火木水": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "火火木": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "火火火": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "火火土": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "火火金": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "火火水": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "火土木": {
+   "verdict": "吉多於凶",
+   "level": 5
+  },
+  "火土火": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "火土土": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "火土金": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "火土水": {
+   "verdict": "吉多於凶",
+   "level": 5
+  },
+  "火金木": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "火金火": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "火金土": {
+   "verdict": "吉凶參半",
+   "level": 4
+  },
+  "火金金": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "火金水": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "火水木": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "火水火": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "火水土": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "火水金": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "火水水": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "土木木": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "土木火": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "土木土": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "土木金": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "土木水": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "土火木": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "土火火": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "土火土": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "土火金": {
+   "verdict": "吉多於凶",
+   "level": 5
+  },
+  "土火水": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "土土木": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "土土火": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "土土土": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "土土金": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "土土水": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "土金木": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "土金火": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "土金土": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "土金金": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "土金水": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "土水木": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "土水火": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "土水土": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "土水金": {
+   "verdict": "吉凶參半",
+   "level": 4
+  },
+  "土水水": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "金木木": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "金木火": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "金木土": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "金木金": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "金木水": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "金火木": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "金火火": {
+   "verdict": "吉凶參半",
+   "level": 4
+  },
+  "金火土": {
+   "verdict": "吉凶參半",
+   "level": 4
+  },
+  "金火金": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "金火水": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "金土木": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "金土火": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "金土土": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "金土金": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "金土水": {
+   "verdict": "吉多於凶",
+   "level": 5
+  },
+  "金金木": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "金金土": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "金金金": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "金金水": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "金水木": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "金水火": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "金水土": {
+   "verdict": "吉",
+   "level": 6
+  },
+  "金水金": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "金水水": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "水木木": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "水木火": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "水木土": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "水木金": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "水木水": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "水火木": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "水火火": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "水火土": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "水火金": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "水火水": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "水土木": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "水土火": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "水土土": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "水土金": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "水土水": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "水金木": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "水金火": {
+   "verdict": "凶多於吉",
+   "level": 3
+  },
+  "水金土": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "水金金": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "水金水": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "水水木": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "水水火": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "水水土": {
+   "verdict": "大凶",
+   "level": 1
+  },
+  "水水金": {
+   "verdict": "大吉",
+   "level": 7
+  },
+  "水水水": {
+   "verdict": "中吉",
+   "level": 5
+  },
+  "金金火": {
+   "verdict": "凶",
+   "source": "nova-fill",
+   "level": 2
+  }
+ }
+}
