@@ -62,6 +62,17 @@
       check('generate', t.input, t.expect, res.map((c) => ({ name: c.c1.char + c.c2.char, total: c.total, grade: c.grade,
         scores: c.scores, f1: c.combo.f1, f2: c.combo.f2 })));
     }
+    for (const t of golden.prompts || []) {
+      const inp = t.input, o = inp.options;
+      const fate = fateFromInput(Nova, inp.fate);
+      const opt = Object.assign(Nova.generator.defaultOptions(), { strictness: o.strictness, excludeFemaleCaution: o.exclude_female_caution, maxLevel: o.max_level });
+      const req = Nova.advisor.buildRecommend({ surname: inp.surname, l1: inp.l1, l2: inp.l2, gender: inp.gender, fate,
+        combos: Nova.generator.luckyCombos(inp.l1, inp.l2, opt), buckets: Nova.chars.byStroke(o.max_level), n: 8, preferences: inp.preferences });
+      const c1 = Nova.chars.lookup(inp.name[0]), c2 = Nova.chars.lookup(inp.name[1]);
+      const ex = Nova.advisor.buildExplain({ surname: inp.surname, c1, c2, rating: Nova.rating.rateName(inp.l1, inp.l2, c1, c2, fate), fate });
+      check('prompts', { surname: inp.surname, name: inp.name }, t.expect, { system: req.system, recommend_user: req.user,
+        explain_user: ex.user, allowed_strokes: [...req.allowed.keys()].sort((a, b) => a - b) });
+    }
     return { pass, fails, total: pass + fails.length };
   }
 

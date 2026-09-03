@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8"><title>llm spike</title><pre id="out">running</pre>
+<script src="../data/gen/tables.gen.js"></script><script src="../data/gen/chars.gen.js"></script><script src="../data/gen/prompts.gen.js"></script>
+<script src="../src/vendor/lunar.js"></script>
+<script src="../src/js/core/wuge.js"></script><script src="../src/js/core/dayan.js"></script><script src="../src/js/core/sancai.js"></script><script src="../src/js/core/yinyun.js"></script>
+<script src="../src/js/core/chars.js"></script><script src="../src/js/core/rating.js"></script><script src="../src/js/core/bazi.js"></script><script src="../src/js/core/generator.js"></script>
+<script src="../src/js/llm/provider.js"></script><script src="../src/js/llm/gemini.js"></script><script src="../src/js/llm/advisor.js"></script>
+<script>
+const out = document.getElementById('out'); const lines = []; const log = (k, v) => { lines.push(k + ': ' + v); out.textContent = lines.join('\n'); };
+(async () => {
+  const fate = Nova.bazi.compute(2026, 9, 3, 10, 30, 'balance');
+  const combos = Nova.generator.luckyCombos(16, 0, Object.assign(Nova.generator.defaultOptions(), { excludeFemaleCaution: true }));
+  const req = Nova.advisor.buildRecommend({ surname: '陳', l1: 16, l2: 0, gender: 'girl', fate, combos, buckets: Nova.chars.byStroke(2), n: 8, preferences: '' });
+  log('prompt_len', req.user.length + ' chars, strokes ' + [...req.allowed.keys()].join(','));
+  Nova.llm.set({ provider: 'gemini', model: 'gemini-3.5-flash-lite', apiKey: 'AQ.nova-fake', remember: false });
+  try { await Nova.llm.generateJson({ system: req.system, user: req.user, schema: Nova.advisor.PICKS_SCHEMA }); log('json', 'unexpected success'); }
+  catch (e) { log('json_error', e.message + ' [status ' + e.status + ']'); }
+  try { await Nova.llm.streamText({ system: req.system, user: 'hi', onDelta: () => {} }); log('stream', 'unexpected success'); }
+  catch (e) { log('stream_error', e.message + ' [status ' + e.status + ']'); }
+  Nova.llm.set({ apiKey: 'AIzaFAKE' }); log('warn_AIza', Nova.llm.providers.gemini.keyWarning('AIzaFAKE'));
+  log('done', 'true');
+})();
+</script>

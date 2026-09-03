@@ -113,10 +113,28 @@ def main() -> None:
                         'f1': c.combo.f1, 'f2': c.combo.f2} for c in res],
         })
 
+    # 提示字串：Python 與 JS 由同一模板產生，必須逐字相同
+    from nova_core.llm.advisor import build_explain, build_recommend
+    prompts = []
+    for s, b, method, gender, name, kw in [('陳', BIRTHS[0], 'balance', 'girl', '冠宇', dict(exclude_female_caution=True)),
+                                            ('歐陽', None, None, 'boy', '丞亮', dict(strictness='strict')),
+                                            ('林', BIRTHS[15], 'geju', 'boy', '愉修', dict(max_level=1))]:
+        l1, l2 = surname_strokes(s)
+        f = bazi.compute(*b, method=method) if b else None
+        opt = Options(**kw)
+        req = build_recommend(s, l1, l2, gender, f, lucky_combos(l1, l2, opt), chars.by_stroke(opt.max_level), n=8, preferences='喜歡自然意象')
+        c1, c2 = chars.lookup(name[0]), chars.lookup(name[1])
+        system, user = build_explain(s, c1, c2, rating.rate_name(l1, l2, c1, c2, f), f)
+        prompts.append({'input': {'surname': s, 'l1': l1, 'l2': l2, 'gender': gender, 'fate': fate_input(b, method) if b else None,
+                                  'options': {'strictness': opt.strictness, 'exclude_female_caution': opt.exclude_female_caution,
+                                              'max_level': opt.max_level}, 'name': name, 'preferences': '喜歡自然意象'},
+                        'expect': {'system': req.system, 'recommend_user': req.user, 'explain_user': user,
+                                   'allowed_strokes': sorted(req.allowed)}})
+
     golden = {
         'meta': {'generated': date.today().isoformat(), 'seed': SEED, 'chars_version': chars._payload()['version'],
                  'chars_generated': chars._payload()['generated']},
-        'bazi': fates, 'rating': ratings, 'combos': combos, 'generate': gens,
+        'bazi': fates, 'rating': ratings, 'combos': combos, 'generate': gens, 'prompts': prompts,
     }
     OUT.mkdir(parents=True, exist_ok=True)
     text = json.dumps(golden, ensure_ascii=False, separators=(',', ':'))

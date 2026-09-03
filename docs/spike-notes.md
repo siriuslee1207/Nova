@@ -35,3 +35,11 @@
 4. **文字轉換**：OpenCC `s2twp` + 後修正（生髮→生發）。姓氏簡→繁對照：Unihan `kTraditionalVariant` 有值且該字不在 Big5 常用區者，取 OpenCC `s2tw` 結果（避免 于→於、干→幹、后→後）。
 5. **拼音**：ETL 轉數字調（`hào`→`hao4`，輕聲不加數字）；韻母比較前去掉調號數字。
 6. **LLM**：Gemini 走瀏覽器直連 BYOK；Copilot 只走官方 SDK/CLI（見計畫）。
+
+## 2026-09-04 驗證紀錄
+- Python/JS parity：`tests/parity.mjs` 550/550（八字 34、評分 500、筆畫組合 6、完整產生 10）；瀏覽器 `tests/parity.html`（file://）同樣全過。
+- JS 產生耗時（node）：預設 104 ms；次常用字集＋寬鬆＋top 100 約 1 s → UI 用 `generateAsync` 分批讓出主執行緒。
+- `dist/nova.html` 1.2 MB，`file://` 下以 `?surname=陳&born=…` 自動執行成功；Edge headless 截圖版面正常。
+- Gemini adapter 以假 key 從 `file://` 實測：`generateContent` 與 `streamGenerateContent` 皆收到 401 JSON 並轉成可讀錯誤（CORS 放行）；`AIza` 前綴警示正確。**尚未以真 key 驗證成功路徑**（需使用者自備 key）。
+- 本機無 `copilot` CLI／`gh`，Copilot provider 依官方 SDK 文件撰寫，未實測。
+- 資料品質決策補充：`kFrequency` 在 Unihan 17.0 已不存在，`kGradeLevel` 僅涵蓋 48% 且遺漏大量名字用字，故常用等級改由 `name_common.json`（可編輯）定義第 1 級。

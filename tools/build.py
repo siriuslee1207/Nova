@@ -26,7 +26,7 @@ def main(argv: list[str]) -> None:
     steps = []
     if '--transcribe' in argv:
         steps.append('transcribe_fate.py')
-    steps += ['build_tables.py', 'build_chars.py']
+    steps += ['build_tables.py', 'build_chars.py', 'build_prompts.py']
     if '--fixtures' in argv:
         steps.append('gen_fixtures.py')
     steps.append('bundle.py')

@@ -64,6 +64,14 @@ def build_parser() -> argparse.ArgumentParser:
                    help='排除女性不宜之總格（預設：女生開、男生關）')
     p.add_argument('--explain', metavar='NAME', help='只對此名字（2 字）輸出完整評分報告')
     p.add_argument('--json', action='store_true', help='以 JSON 輸出')
+    g = p.add_argument_group('AI 顧問')
+    g.add_argument('--ai', choices=['recommend', 'explain'],
+                   help='recommend：請 AI 從合格字池挑名（由 Nova 評分）；explain：對 --explain 的名字生成解說')
+    g.add_argument('--provider', choices=['gemini', 'copilot'], default='gemini')
+    g.add_argument('--model', help='模型名稱（預設 gemini-3.5-flash-lite / gpt-5-mini）')
+    g.add_argument('--prefs', default='', help='給 AI 的偏好說明')
+    g.add_argument('--ai-n', type=int, default=8, help='請 AI 推薦幾個名字')
+    g.add_argument('--ai-dump', action='store_true', help='只印出送給 AI 的提示，不呼叫（不需 key）')
     return p
 
 
@@ -116,6 +124,44 @@ def explain(surname: str, l1: int, l2: int, name: str, fate, as_json: bool) -> N
             print(f"  [{k}] " + '；'.join(lines))
 
 
+def _provider(args):
+    from .llm.base import get_provider
+    return get_provider(args.provider, args.model)
+
+
+def ai_explain(args, surname: str, l1: int, l2: int, name: str, fate) -> None:
+    from .llm.advisor import build_explain
+    c1, c2 = chars.lookup(name[0]), chars.lookup(name[1])
+    system, user = build_explain(surname, c1, c2, rate_name(l1, l2, c1, c2, fate), fate)
+    if args.ai_dump:
+        print('--- system ---\n' + system + '\n--- user ---\n' + user)
+        return
+    print(f'\n[AI 解說・{args.provider}]')
+    _provider(args).stream_text(system, user, on_delta=lambda t: print(t, end='', flush=True))
+    print()
+
+
+def ai_recommend(args, surname: str, l1: int, l2: int, fate, opt: Options) -> None:
+    from .generator import lucky_combos
+    from .llm.advisor import PICKS_SCHEMA, build_recommend, validate_picks
+    combos = lucky_combos(l1, l2, opt)
+    if not combos:
+        raise SystemExit('沒有合格的筆畫組合，請放寬嚴格度')
+    req = build_recommend(surname, l1, l2, args.gender, fate, combos, chars.by_stroke(opt.max_level),
+                          n=args.ai_n, preferences=args.prefs)
+    if args.ai_dump:
+        print('--- system ---\n' + req.system + '\n--- user ---\n' + req.user)
+        return
+    data = _provider(args).generate_json(req.system, req.user, PICKS_SCHEMA)
+    ok, rejected = validate_picks(data.get('picks'), req)
+    print(f'[AI 推薦・{args.provider}] {len(ok)} 個合格' + (f'，{len(rejected)} 個不合格已略過' if rejected else ''))
+    for c1, c2, reason in ok:
+        r = rate_name(l1, l2, c1, c2, fate)
+        print(f'  {surname}{c1.char}{c2.char}  {r.total:>5}（{r.grade}）  {c1.py[0]} {c2.py[0]}  {c1.wx}{c2.wx}  — {reason}')
+    for rj in rejected:
+        print(f'  ✗ {rj["first"]}{rj["second"]}：{rj["why"]}')
+
+
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     surname, notes = chars.normalize_surname(args.surname)
@@ -130,11 +176,16 @@ def main(argv: list[str] | None = None) -> None:
         print('；'.join(notes))
     if args.explain:
         explain(surname, l1, l2, args.explain, fate, args.json)
+        if args.ai == 'explain':
+            ai_explain(args, surname, l1, l2, args.explain, fate)
         return
     female = args.female_caution if args.female_caution is not None else (args.gender == 'girl')
     opt = Options(strictness=args.strictness, exclude_female_caution=female, max_level=args.level,
                   avoid_chars=frozenset(args.avoid), require_chars=frozenset(args.require),
                   fixed_first=args.first, fixed_second=args.second, top_n=args.top, per_first_char=args.per_first)
+    if args.ai == 'recommend':
+        ai_recommend(args, surname, l1, l2, fate, opt)
+        return
     results = generate(l1, l2, fate, opt)
     if args.json:
         out = [{'rank': i + 1, 'name': surname + c.name, 'total': c.total, 'grade': c.grade,
