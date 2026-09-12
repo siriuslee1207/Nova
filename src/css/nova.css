@@ -76,7 +76,7 @@ button:disabled { opacity: .6; cursor: progress; }
 .progress b { display: block; height: 100%; width: 0; background: var(--accent); transition: width .1s; }
 .hint.small { font-size: .8rem; margin: .4rem 0 0; }
 .with-btn { display: flex; gap: .3rem; }
-.with-btn input { flex: 1; min-width: 0; }
+.with-btn input, .with-btn select { flex: 1; min-width: 0; }
 button.icon { padding: 0 .6rem; line-height: 1; }
 .status.small { font-size: .8rem; margin: -.25rem 0 .3rem; }
 .status.small:empty { display: none; }

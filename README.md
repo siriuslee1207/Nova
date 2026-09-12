@@ -16,7 +16,7 @@
 AI 顧問：在左側貼上你自己的 Gemini API key（AI Studio 建立；新式 key 以 `AQ.` 開頭，舊式 `AIza` 已被 Google 停用），
 按「AI 推薦用字」，或在卡片明細中按「AI 解說」。key 由瀏覽器直接送到 Google，不經任何中間伺服器。
 key 與模型設定會自動存在這個瀏覽器的 localStorage，下次開啟不用重貼，清空欄位即移除；`file://` 頁面共用同一個 origin，
-同一瀏覽器開的其他本機 HTML 也讀得到，公用電腦請用完清掉。免費層每日請求數有限，預設模型 `gemini-3.5-flash-lite`；貼上 key 後會自動抓取這把 key 可用的 Gemini 文字模型清單，點模型欄位即可選、也可自行輸入，按 ↻ 重新抓取。
+同一瀏覽器開的其他本機 HTML 也讀得到，公用電腦請用完清掉。免費層每日請求數有限，預設模型 `gemini-3.5-flash-lite`；貼上 key 後會自動抓取這把 key 可用的 Gemini 文字模型清單填入下拉選單，選「自行輸入…」可手動填模型名稱，按 ↻ 重新抓取。
 網頁端只提供 Gemini；GitHub Copilot 沒有可用的 API key，只能走下方命令列。
 
 ## 命令列

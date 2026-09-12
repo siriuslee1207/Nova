@@ -218,6 +218,25 @@
     $('#ai-recommend').disabled = !ready;
     document.body.classList.toggle('ai-ready', ready);
     document.querySelectorAll('.ai-explain').forEach((b) => { b.disabled = !ready; });
+    aiSyncPick();
+  }
+
+  // 模型下拉：清單抓到後列出模型 id，最後一項「自行輸入…」才顯示文字欄位；文字欄位 #ai-model 永遠是設定的真相來源。
+  const CUSTOM = '__custom__';
+  let modelList = [], customMode = false;
+  function aiRenderPick() {
+    const opts = modelList.length
+      ? modelList.map((m) => `<option value="${esc(m.id)}" title="${esc(m.label)}">${esc(m.id)}</option>`)
+      : ['<option value="" disabled>（貼上 key 後自動抓取清單）</option>'];
+    opts.push(`<option value="${CUSTOM}">自行輸入…</option>`);
+    $('#ai-model-pick').innerHTML = opts.join('');
+    aiSyncPick();
+  }
+  function aiSyncPick() {
+    const cur = $('#ai-model').value.trim();
+    const custom = customMode || !modelList.some((m) => m.id === cur);
+    $('#ai-model-pick').value = custom ? CUSTOM : cur;
+    $('#ai-model-custom').hidden = !custom;
   }
 
   // 模型清單：有 key 就向供應商抓一次（同一把 key 不重抓，舊式 key 不白抓）；↻ 強制重抓。清單進 datalist，欄位仍可自行輸入。
@@ -231,9 +250,11 @@
     $('#ai-models-refresh').disabled = true;
     try {
       const models = await Nova.llm.listModels();
-      $('#ai-models').innerHTML = models.map((m) => `<option value="${esc(m.id)}">${esc(m.label)}</option>`).join('');
       const cur = $('#ai-model').value.trim();
-      st.textContent = `${models.length} 個可用模型，點模型欄位可選` + (cur && !models.some((m) => m.id === cur) ? `；目前的「${cur}」不在清單中` : '');
+      modelList = models;
+      customMode = !models.some((m) => m.id === cur);
+      aiRenderPick();
+      st.textContent = `${models.length} 個可用模型` + (customMode && cur ? `；目前的「${cur}」不在清單中，保留自行輸入` : '');
     } catch (e) {
       modelsKey = '';
       st.textContent = '抓不到模型清單：' + e.message;
@@ -249,7 +270,15 @@
     sel.value = s.provider;
     $('#ai-model').value = s.model;
     $('#ai-key').value = s.apiKey;
-    sel.addEventListener('change', () => { $('#ai-model').value = aiProvider().defaultModel || ''; aiSync(); });
+    aiRenderPick();
+    sel.addEventListener('change', () => { customMode = false; $('#ai-model').value = aiProvider().defaultModel || ''; aiSync(); });
+    $('#ai-model-pick').addEventListener('change', () => {
+      const v = $('#ai-model-pick').value;
+      customMode = v === CUSTOM;
+      if (!customMode) $('#ai-model').value = v;
+      aiSync();
+      if (customMode) $('#ai-model').focus();
+    });
     for (const id of ['ai-model', 'ai-key']) $('#' + id).addEventListener('input', aiSync);
     $('#ai-key').addEventListener('input', () => { clearTimeout(modelsTimer); modelsTimer = setTimeout(() => aiLoadModels(false), 700); });
     $('#ai-models-refresh').addEventListener('click', () => aiLoadModels(true));
