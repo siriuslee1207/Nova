@@ -13,6 +13,21 @@
 點結果卡片展開五格、三才、評分明細；「單一名字評分」可直接評自己想的名字。
 可用網址參數預填並自動執行，例如 `nova.html?surname=陳&born=2026-09-03T10:30&gender=girl` 或 `…&explain=冠宇`。
 
+### 在手機上使用
+
+iPhone／iPad 在「檔案」App 裡直接點開 `nova.html` **不會動**：iOS 用「快速查看」預覽 HTML，版面畫得出來、但完全不執行 JavaScript，
+所以按「產生名字」沒有任何反應。這種情況頁面最上方會出現紅色提示說明原因（提示由 CSS 控制，JavaScript 一跑起來就消失）。三條可用的路：
+
+1. **從電腦分享給手機（最穩）**：電腦上跑 `.venv\Scripts\python tools\serve.py`，它會印出像 `http://192.168.1.23:8000/nova.html` 的網址；
+   手機連同一個 Wi-Fi、用瀏覽器開即可，Safari 分享選單的「加入主畫面」可以把它變成像 App 的圖示。
+   第一次執行 Windows 防火牆會詢問，要允許「私人網路」。頁面仍是純靜態、運算全在手機上，只有 AI 顧問會從手機直接連 Google。
+2. **iPhone 本機開**：「檔案」App 長按 `nova.html` → 分享 → 選 Safari（「拷貝到 Safari」），在 Safari 裡 JavaScript 才會執行；iOS 版本不同可能沒有這個選項。
+3. **Android**：用 Chrome 開，網址列輸入 `file:///sdcard/Download/nova.html`。
+
+手機版面是單欄；輸入框字級固定 16px（更小的話 iOS 聚焦時會自動放大整頁），字表與筆畫組合的點擊目標加大。
+手機沒有滑鼠可停留看 `title`，所以「筆畫組合選字」改成：點到的字會把拼音、五行與字義寫在字表下方。
+另外未攔截的錯誤會直接印在頁面最上方（手機沒有主控台可看）。
+
 ### 評分權重
 
 總分預設是五維加權：文化 20%、五行 25%、生肖 10%、五格三才 30%、音韻 15%（三才併在五格維度內）。
@@ -105,7 +120,7 @@ node tests\parity.mjs                                  # 或雙擊 tests\parity.
 | `data/gen/` | 建置產物：`chars.json`/`chars.gen.js`、`tables.gen.js`、`prompts.gen.js`、`etl_report.md` |
 | `nova_core/` | Python 參考實作、CLI、`llm/`（gemini、copilot、advisor） |
 | `src/` | 前端：`js/core/*`（與 Python 對應的模組）、`js/llm/*`、`ui.js`、`vendor/lunar.js` |
-| `tools/` | ETL、轉錄、fixture、打包 |
+| `tools/` | ETL、轉錄、fixture、打包、`serve.py`（分享給手機） |
 | `tests/` | pytest；`parity_core.js` + `parity.mjs`/`parity.html` |
 | `docs/spike-notes.md` | 資料品質、環境驗證與決策紀錄 |
 

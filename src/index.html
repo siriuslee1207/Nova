@@ -7,6 +7,38 @@
 <link rel="stylesheet" href="css/nova.css">
 </head>
 <body>
+<script>
+// JavaScript 活著的證明：加上 .js，下面的 #nojs 提示就被 CSS 藏起來；沒跑到這行（JS 被停用）提示就會留著。
+// iPhone／iPad 的「檔案」App 是用「快速查看」預覽 HTML——只畫版面、不執行程式，按鈕會完全沒反應。
+// 手機上沒有主控台，所以未攔截的錯誤也直接印在畫面最上方。
+(function () {
+  document.documentElement.className += ' js';
+  function show(msg) {
+    var host = document.body || document.documentElement, box = document.getElementById('jserr');
+    if (!box) { box = document.createElement('div'); box.id = 'jserr'; host.insertBefore(box, host.firstChild); }
+    box.textContent = '⚠ 程式出錯，功能可能無法使用：' + msg;
+  }
+  window.addEventListener('error', function (e) {
+    show((e.message || '未知錯誤') + (e.lineno ? '（第 ' + e.lineno + ' 行）' : ''));
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e.reason;
+    show(String((r && r.message) || r || '未處理的錯誤'));
+  });
+})();
+</script>
+<div id="nojs" class="nojs">
+  <b>這個瀏覽器沒有執行 JavaScript，Nova 不會有反應</b>
+  <p>版面看得到、按「產生名字」卻沒動靜，就是這個原因。最常見的是 <b>iPhone／iPad 在「檔案」App 裡直接點開</b>：
+    它用「快速查看」預覽，只畫版面、不跑程式。</p>
+  <ul>
+    <li><b>iPhone／iPad</b>：在「檔案」App <b>長按</b> <code>nova.html</code> → 分享 → 選 <b>Safari</b>（「拷貝到 Safari」），
+      在 Safari 裡開才會執行；iOS 版本不同也可能沒有這個選項。</li>
+    <li><b>最穩：從電腦連過來</b>。電腦上執行 <code>python tools/serve.py</code>，手機連同一個 Wi-Fi，
+      用它印出的網址開，再「加入主畫面」就像 App 一樣。</li>
+    <li><b>Android</b>：用 Chrome 開，網址列輸入 <code>file:///sdcard/Download/nova.html</code>。</li>
+  </ul>
+</div>
 <header class="top">
   <h1>Nova <span class="sub">小孩取名</span></h1>
   <p class="tag">五格數理・三才・八字喜用・生肖・音韻 — 離線單檔，資料不離開你的電腦</p>

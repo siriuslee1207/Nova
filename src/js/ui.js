@@ -385,7 +385,13 @@
     return `<div class="charlist" data-slot="${slot}"><h4>${slot === 0 ? '第一字' : '第二字'} ${stroke} 畫 <span class="dim">（${shown.length}${shown.length !== list.length ? '／' + list.length : ''} 字）</span></h4>
       <div class="wxfilter chips"><span class="fl">五行</span>${wxChips}</div>
       <div class="wxfilter chips"><span class="fl">聲調</span>${toneChips}</div>
-      <div class="chars">${tiles || '<span class="dim">（沒有符合這個五行／聲調的字）</span>'}</div></div>`;
+      <div class="chars">${tiles || '<span class="dim">（沒有符合這個五行／聲調的字）</span>'}</div>
+      <p class="chinfo">${pick ? chInfoHtml(pick) : ''}</p></div>`;
+  }
+
+  // 手機沒有滑鼠、看不到 title，所以點到的字直接把拼音與字義寫在字表下面
+  function chInfoHtml(c) {
+    return `<b>${esc(c.char)}</b>${esc(c.py.join(' / '))}・${wxTag(c.wx)}・${esc(c.meaning || '（無釋義）')}`;
   }
 
   function renderPick() {
@@ -401,7 +407,7 @@
       <h4>已選 ${r.f1} + ${r.f2} 畫 <span class="dim">五格分（原評分）${r.wugeScore}</span></h4>
       <div class="ge">${geCells(r.ge)}</div>
       <p>三才 ${esc(r.sancaiKey)}・<b class="cg-${esc(r.cdiGrade)}">${esc(r.cdiGrade)}</b> <span class="dim">（原表 ${esc(r.fateVerdict)}）</span><br><span class="dim">${esc(S.detail(r.sancaiKey))}</span></p>
-      <p class="hint small">點一個第一字、再點一個第二字，下方就會出現這個名字的評分；字表可依五行、注音聲調過濾（聲調取主要讀音），滑鼠停在字上看拼音與字義。${legend}</p>
+      <p class="hint small">點一個第一字、再點一個第二字，下方就會出現這個名字的評分；字表可依五行、注音聲調過濾（聲調取主要讀音），點到的字會在字表下方顯示拼音與字義。${legend}</p>
     </div>
     <div class="charpick">${charListHtml(0, r.f1, lists[0])}${charListHtml(1, r.f2, lists[1])}</div>`;
   }
@@ -446,6 +452,8 @@
       cstate.pick[slot] = cstate.pick[slot] && cstate.pick[slot].char === c.char ? null : c;
       b.closest('.chars').querySelectorAll('.ch.on').forEach((x) => x.classList.remove('on'));
       if (cstate.pick[slot]) b.classList.add('on');
+      const info = b.closest('.charlist').querySelector('.chinfo');
+      if (info) info.innerHTML = cstate.pick[slot] ? chInfoHtml(c) : '';
       composeName();
       return;
     }
