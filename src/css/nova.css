@@ -21,8 +21,9 @@ h2 { font-size: 1.05rem; margin: 1.2rem 0 .6rem; color: var(--muted); font-weigh
 .row.inline { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
 label { display: flex; flex-direction: column; gap: .2rem; font-size: .88rem; color: var(--muted); }
 label.check { flex-direction: row; align-items: center; gap: .4rem; color: var(--ink); font-size: .9rem; }
-input, select, button { font: inherit; color: var(--ink); }
-input:not([type=checkbox]), select { border: 1px solid var(--line); border-radius: 8px; padding: .45rem .6rem; background: #fff; width: 100%; }
+input, select, textarea, button { font: inherit; color: var(--ink); }
+input:not([type=checkbox]), select, textarea { border: 1px solid var(--line); border-radius: 8px; padding: .45rem .6rem; background: #fff; width: 100%; }
+textarea { resize: vertical; line-height: 1.5; font-size: .9rem; }
 input[type=number] { width: 5.5rem; }
 details.adv { border-top: 1px dashed var(--line); margin-top: .6rem; padding-top: .4rem; }
 details.adv summary { cursor: pointer; color: var(--muted); font-size: .9rem; }
@@ -76,7 +77,9 @@ button:disabled { opacity: .6; cursor: progress; }
 .progress b { display: block; height: 100%; width: 0; background: var(--accent); transition: width .1s; }
 .hint.small { font-size: .8rem; margin: .4rem 0 0; }
 .with-btn { display: flex; gap: .3rem; }
-.with-btn input, .with-btn select { flex: 1; min-width: 0; }
+.with-btn input, .with-btn select, .with-btn textarea { flex: 1; min-width: 0; }
+.with-btn:has(textarea) { align-items: flex-start; }
+.with-btn:has(textarea) button.icon { padding: .4rem .6rem; }
 button.icon { padding: 0 .6rem; line-height: 1; }
 .status.small { font-size: .8rem; margin: -.25rem 0 .3rem; }
 .status.small:empty { display: none; }
