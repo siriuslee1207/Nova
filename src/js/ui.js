@@ -311,7 +311,8 @@
       hid = Nova.aiHistory.add({ surname: s.surname, gender: opt.gender, born: bornSummary(), model: Nova.llm.settings().model, prefs });
       renderHistory();
       const req = Nova.advisor.buildRecommend({ surname: s.surname, l1, l2, gender: opt.gender, fate, combos, buckets, n: 8, preferences: prefs });
-      const { data, usage } = await Nova.llm.generateJson({ system: req.system, user: req.user, schema: Nova.advisor.PICKS_SCHEMA });
+      const { data, usage } = await Nova.llm.generateJson({ system: req.system, user: req.user, schema: Nova.advisor.PICKS_SCHEMA,
+        onStatus: (m) => { $('#ai-status').textContent = m; } });
       const { ok, rejected } = Nova.advisor.validatePicks(data.picks, req);
       renderAiPicks(ok, { surname: s.surname, l1, l2, fate });
       Nova.aiHistory.update(hid, { result: ok.map(({ c1, c2 }) => ({ name: s.surname + c1.char + c2.char, total: Nova.rating.rateName(l1, l2, c1, c2, fate).total })) });
@@ -415,7 +416,8 @@
     try {
       const r = Nova.rating.rateName(entry.l1, entry.l2, entry.cand.c1, entry.cand.c2, entry.fate);
       const req = Nova.advisor.buildExplain({ surname: entry.surname, c1: entry.cand.c1, c2: entry.cand.c2, rating: r, fate: entry.fate });
-      await Nova.llm.streamText({ system: req.system, user: req.user, onDelta: (_, full) => { out.textContent = full; } });
+      await Nova.llm.streamText({ system: req.system, user: req.user, onDelta: (_, full) => { out.textContent = full; },
+        onStatus: (m) => { out.textContent = m; } });
     } catch (e) {
       out.textContent = '失敗：' + e.message;
     } finally {

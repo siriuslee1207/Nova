@@ -26,34 +26,54 @@
   }
 
   async function toError(res) {
-    let text = '', err = null;
+    let text = '', err = null, daily = false;
     try { text = await res.text(); err = JSON.parse(text).error; } catch (_) { /* non-JSON */ }
     const reason = err && Array.isArray(err.details) ? err.details.map((d) => d.reason).filter(Boolean).join(',') : '';
     let msg = 'Gemini HTTP ' + res.status + (err ? ' ' + (err.status || '') + ': ' + (err.message || '') : '');
     if (reason === 'API_KEY_INVALID') msg = 'API key 無效（400 API_KEY_INVALID）。請確認貼上的是 AI Studio 的新式 key。';
     else if (res.status === 401) msg = 'API key 無法通過驗證（401）。請確認 key 完整無誤，且是 AI Studio 建立的新式 key（AQ. 開頭）。';
     else if (res.status === 429) {
-      msg = /per day|daily|PerDay|RPD/i.test((err && err.message) || '')
+      daily = /per day|daily|PerDay|RPD/i.test((err && err.message) || '');
+      msg = daily
         ? '已達此模型的每日請求上限（RPD），要等到太平洋時間午夜才重置；可改用其他模型（如 gemini-3.5-flash-lite）。'
-        : '請求過於頻繁（RPM），請等幾秒再試。';
-    } else if (res.status === 404) msg = '模型名稱不存在：' + (err ? err.message : '');
-    const e = new Error(msg); e.status = res.status; e.reason = reason; e.body = text;
+        : '請求過於頻繁（RPM 限流），請等幾秒再試。';
+    } else if (res.status === 503) msg = '模型目前需求量大（503 UNAVAILABLE），Google 暫時無法服務。請稍後再試，或在模型下拉換一個（如 gemini-3.5-flash）。';
+    else if (res.status === 404) msg = '模型名稱不存在：' + (err ? err.message : '');
+    const e = new Error(msg); e.status = res.status; e.reason = reason; e.body = text; e.daily = daily;
     return e;
   }
 
-  async function request(settings, path, payload, signal) {
-    const res = await fetch(BASE + encodeURIComponent(settings.model) + path, {
-      method: 'POST', signal,
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': settings.apiKey },
-      body: JSON.stringify(payload),
+  // 503（模型壅塞）與 429 每分鐘限流是暫時性的，自動退避重試；每日上限（RPD）與其他錯誤直接丟出。
+  const RETRY_DELAYS = [1500, 4000, 8000];
+  function sleep(ms, signal) {
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(resolve, ms);
+      if (signal) signal.addEventListener('abort', () => { clearTimeout(t); reject(new Error('已取消')); }, { once: true });
     });
-    if (!res.ok) throw await toError(res);
-    return res;
+  }
+  function retriable(e) { return e.status === 503 || (e.status === 429 && !e.daily); }
+  async function request(settings, path, payload, signal, onStatus) {
+    for (let attempt = 0; ; attempt++) {
+      const res = await fetch(BASE + encodeURIComponent(settings.model) + path, {
+        method: 'POST', signal,
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': settings.apiKey },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) return res;
+      const e = await toError(res);
+      if (attempt < RETRY_DELAYS.length && retriable(e)) {
+        if (onStatus) onStatus(`模型忙碌（${res.status}），${Math.round(RETRY_DELAYS[attempt] / 1000)} 秒後第 ${attempt + 1} 次重試…`);
+        await sleep(RETRY_DELAYS[attempt], signal);
+        continue;
+      }
+      if (attempt) e.message += `（已自動重試 ${attempt} 次）`;
+      throw e;
+    }
   }
 
   // SSE：每個 data: 是完整 GenerateContentResponse；無 [DONE]，串流關閉即結束；略過 thought 部分。
-  async function streamText({ settings, system, user, onDelta, signal }) {
-    const res = await request(settings, ':streamGenerateContent?alt=sse', body(settings.model, system, user, false, null, settings.thinking), signal);
+  async function streamText({ settings, system, user, onDelta, onStatus, signal }) {
+    const res = await request(settings, ':streamGenerateContent?alt=sse', body(settings.model, system, user, false, null, settings.thinking), signal, onStatus);
     const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
     let buf = '', text = '', usage = null, finish = null;
     for (;;) {
@@ -82,8 +102,8 @@
     return { text, usage, finishReason: finish };
   }
 
-  async function generateJson({ settings, system, user, schema, signal }) {
-    const res = await request(settings, ':generateContent', body(settings.model, system, user, true, schema, settings.thinking), signal);
+  async function generateJson({ settings, system, user, schema, onStatus, signal }) {
+    const res = await request(settings, ':generateContent', body(settings.model, system, user, true, schema, settings.thinking), signal, onStatus);
     const data = await res.json();
     const cand = data.candidates && data.candidates[0];
     if (!cand) throw new Error('沒有回應內容' + (data.promptFeedback ? '：' + JSON.stringify(data.promptFeedback) : ''));
