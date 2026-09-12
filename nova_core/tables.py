@@ -43,3 +43,8 @@ def sancai_cdi() -> dict:
 def jishu() -> dict:
     """36 吉數（使用者指定表），供「筆畫組合選字」判定五格。"""
     return load('jishu36.json')
+
+
+def jishu_grade() -> dict:
+    """81 數的吉數等級（大吉／吉／半吉／半凶／凶，fate dayan81 × 謝達輝 81 劃表合併）；大吉＋吉＝36 吉數。"""
+    return load('jishu_grade.json')

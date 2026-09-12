@@ -242,7 +242,8 @@
   }
 
   // ---------------------------------------------------------------- 筆畫組合選字
-  // 與「產生名字」獨立（核心在 js/core/combos.js）：謝達輝三才等級 → 勾選的格皆為 36 吉數（含天格）→ 依第一字筆畫分組列出
+  // 與「產生名字」獨立（核心在 js/core/combos.js）：謝達輝三才等級 → 勾選的格皆為 36 吉數（含天格）
+  // → 人地外總四格的吉數等級（大吉／吉／半吉／半凶／凶，預設全收；天格不計）→ 依第一字筆畫分組列出
   // 所有 (第一字, 第二字) 筆畫；點一組 → 兩份字表 → 點第一字＋第二字 → 用現有評分卡評分。過濾條件記在這個瀏覽器。
   const COMBOS_KEY = 'nova.combos.v1';
   const GRID_LABEL = { tian: '天格', ren: '人格', di: '地格', wai: '外格', zong: '總格' };
@@ -259,11 +260,15 @@
         if (g.length) f.sancaiGrades = new Set(g);
       }
       if (s && Array.isArray(s.grids)) f.grids = Nova.combos.GRIDS.filter((k) => s.grids.includes(k));
+      if (s && Array.isArray(s.jishuGrades)) {
+        const jg = s.jishuGrades.filter((x) => Nova.dayan.GRADES.includes(x));
+        if (jg.length) f.jishuGrades = new Set(jg);
+      }
     } catch (_) { /* ignore */ }
     return f;
   }
   function saveCombosFilter(f) {
-    try { localStorage.setItem(COMBOS_KEY, JSON.stringify({ grades: [...f.sancaiGrades], grids: f.grids })); } catch (_) { /* ignore */ }
+    try { localStorage.setItem(COMBOS_KEY, JSON.stringify({ grades: [...f.sancaiGrades], grids: f.grids, jishuGrades: [...f.jishuGrades] })); } catch (_) { /* ignore */ }
   }
   const combosMounted = () => !!$('#combos') && !!cstate.ctx;
 
@@ -301,8 +306,8 @@
   }
 
   function tianBadge() {
-    const { l1, l2 } = cstate.ctx, n = Nova.combos.tianOf(l1, l2), dy = Nova.dayan.find(n), ok = Nova.dayan.isJishu(n);
-    return `天格 <b class="n">${n}</b> <span class="lucky-${esc(dy.lucky)}">${esc(dy.title)}・${esc(dy.lucky)}</span> <span class="${ok ? 'jishu-ok' : 'jishu-bad'}">${ok ? '吉數' : '非吉數'}</span>`;
+    const { l1, l2 } = cstate.ctx, n = Nova.combos.tianOf(l1, l2), D = Nova.dayan, dy = D.find(n), ok = D.isJishu(n), jg = D.grade(n);
+    return `天格 <b class="n">${n}</b> <span class="lucky-${esc(dy.lucky)}">${esc(dy.title)}・${esc(dy.lucky)}</span> <span class="${ok ? 'jishu-ok' : 'jishu-bad'}">${ok ? '吉數' : '非吉數'}</span> <b class="jg-${esc(jg)}" title="吉數等級 ${esc(jg)}（謝達輝 81 劃表 ${esc(D.cdiGrade(n))}）；天格不納入等級條件">${esc(jg)}</b>`;
   }
 
   function renderCombos() {
@@ -313,11 +318,16 @@
     const gridChips = Nova.combos.GRIDS.map((k) =>
       `<label class="chip"><input type="checkbox" data-f="grid" value="${k}"${f.grids.includes(k) ? ' checked' : ''}>${GRID_LABEL[k]}${k === 'tian' ? ' ' + Nova.combos.tianOf(l1, l2) : ''}</label>`).join('');
     const jishu = [...Nova.dayan.jishu()].sort((a, b) => a - b);
+    const jgCounts = Nova.dayan.GRADES.reduce((m, g) => (m[g] = 0, m), {});
+    for (let n = 1; n <= 81; n++) jgCounts[Nova.dayan.grade(n)]++;
+    const jgChips = Nova.dayan.GRADES.map((g) =>
+      `<label class="chip jg-${esc(g)}" title="81 數中 ${jgCounts[g]} 個"><input type="checkbox" data-f="jgrade" value="${esc(g)}"${f.jishuGrades.has(g) ? ' checked' : ''}>${esc(g)}<small>${jgCounts[g]}</small></label>`).join('');
     $('#results').innerHTML = `<section id="combos" class="combos">
       <div class="combos-head"><h3>筆畫組合選字 <span class="dim">姓 ${esc(surname)} ${l1}${l2 ? '+' + l2 : ''} 畫</span></h3><div class="tian" id="combos-tian">${tianBadge()}</div></div>
       <div class="combos-filter" id="combos-filter">
         <div class="frow"><span class="flabel">三才吉凶表（謝達輝）</span>${gradeChips}</div>
         <div class="frow"><span class="flabel">須為吉數的格</span>${gridChips}<span class="dim small" title="${jishu.join(' ')}">吉數表 ${jishu.length} 個</span></div>
+        <div class="frow"><span class="flabel">吉數等級（人地外總）</span>${jgChips}<span class="dim small" title="天格由姓氏決定、改不了，不納入這條件">天格不計；大吉＋吉＝36 吉數；全勾＝不限制</span></div>
         <p class="hint small">另沿用左側「字集」「排除字」「排除女性不宜總格」。五格分是原評分（fate 81 數理表），只作排序參考。</p>
       </div>
       <div id="combos-groups"></div><div id="combos-pick"></div><div id="combos-names"></div>
@@ -335,14 +345,16 @@
       box.innerHTML = `<p class="hint tianfail">天格 ${Nova.combos.tianOf(l1, l2)} 不在吉數內；天格由姓氏決定、無法選擇。取消勾選「天格」即可列出其他各格皆吉數的組合（${alt} 組）。<button type="button" class="chip" data-act="drop-tian">取消勾選天格</button></p>`;
       return;
     }
-    if (!rows.length) { box.innerHTML = '<p class="hint">沒有符合的組合：請至少勾選一個三才等級，或加入「平吉」、減少須為吉數的格。</p>'; return; }
+    if (!rows.length) { box.innerHTML = '<p class="hint">沒有符合的組合：請至少勾選一個三才等級，或加入「平吉」、放寬吉數等級、減少須為吉數的格。</p>'; return; }
     const groups = Nova.combos.groupByFirst(rows);
     const gradesTxt = Nova.sancai.CDI_SELECTABLE.filter((g) => f.sancaiGrades.has(g)).join('、');
     const gridsTxt = f.grids.length ? f.grids.map((k) => GRID_LABEL[k][0]).join('') + ' 皆吉數' : '不限吉數';
-    box.innerHTML = `<p class="combos-summary">符合 <b>${rows.length}</b> 組・第一字 ${groups.length} 種筆畫 <span class="dim">（三才 ${esc(gradesTxt)}；${gridsTxt}）點第二字筆畫選定組合</span></p>`
+    const jgTxt = f.jishuGrades.size >= Nova.dayan.GRADES.length ? ''
+      : '；人地外總等級限 ' + Nova.dayan.GRADES.filter((g) => f.jishuGrades.has(g)).join('、');
+    box.innerHTML = `<p class="combos-summary">符合 <b>${rows.length}</b> 組・第一字 ${groups.length} 種筆畫 <span class="dim">（三才 ${esc(gradesTxt)}；${gridsTxt}${esc(jgTxt)}）點第二字筆畫選定組合</span></p>`
       + groups.map(([f1, rs]) => `<div class="cgroup"><span class="f1">第一字 ${f1} 畫</span>${rs.map((r) => {
         const g = r.ge, on = cstate.sel && cstate.sel.f1 === r.f1 && cstate.sel.f2 === r.f2;
-        const marks = Nova.combos.GRIDS.map((k) => GRID_LABEL[k][0] + (r.jishu[k] ? '吉' : '非')).join(' ');
+        const marks = Nova.combos.GRIDS.map((k) => GRID_LABEL[k][0] + r.grades[k]).join(' ');
         return `<button type="button" class="f2 cg-${esc(r.cdiGrade)}${on ? ' on' : ''}" data-f1="${r.f1}" data-f2="${r.f2}" aria-pressed="${on ? 'true' : 'false'}" title="五格 ${g.tian}/${g.ren}/${g.di}/${g.wai}/${g.zong}（${marks}）・三才 ${esc(r.sancaiKey)} ${esc(r.cdiGrade)}（原表 ${esc(r.fateVerdict)}）・五格分 ${r.wugeScore}">${r.f2}<small>${esc(r.cdiGrade)}</small></button>`;
       }).join('')}</div>`).join('');
   }
@@ -350,8 +362,8 @@
   function geCells(g) {
     const D = Nova.dayan, W = Nova.wuge;
     return [['天格', g.tian], ['人格', g.ren], ['地格', g.di], ['外格', g.wai], ['總格', g.zong]].map(([n, v]) => {
-      const dy = D.find(v), ok = D.isJishu(v);
-      return `<div><small>${n}</small><span class="n">${v}</span><small class="lucky-${esc(dy.lucky)}">${esc(dy.title)}・${esc(dy.lucky)}</small><small class="${ok ? 'jishu-ok' : 'jishu-bad'}">${ok ? '吉數' : '非吉數'}・${W.yinyangOf(v)}${W.elementOf(v)}</small></div>`;
+      const dy = D.find(v), ok = D.isJishu(v), jg = D.grade(v);
+      return `<div><small>${n}</small><span class="n">${v}</span><small class="lucky-${esc(dy.lucky)}">${esc(dy.title)}・${esc(dy.lucky)}</small><small class="${ok ? 'jishu-ok' : 'jishu-bad'}">${ok ? '吉數' : '非吉數'}・${W.yinyangOf(v)}${W.elementOf(v)}</small><small class="jg-${esc(jg)}" title="吉數等級（謝達輝 81 劃表 ${esc(D.cdiGrade(v))}）">${esc(jg)}</small></div>`;
     }).join('');
   }
 
@@ -455,6 +467,7 @@
     const f = cstate.filt;
     f.sancaiGrades = new Set([...document.querySelectorAll('#combos-filter input[data-f="grade"]:checked')].map((i) => i.value));
     f.grids = [...document.querySelectorAll('#combos-filter input[data-f="grid"]:checked')].map((i) => i.value);
+    f.jishuGrades = new Set([...document.querySelectorAll('#combos-filter input[data-f="jgrade"]:checked')].map((i) => i.value));
     saveCombosFilter(f); recomputeCombos(); renderGroups(); renderPick();
     setBusy(false, `${cstate.rows.length} 組合格筆畫組合`);
   }

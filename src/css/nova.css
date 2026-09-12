@@ -131,6 +131,12 @@ button.f2.on { background: var(--accent); color: var(--accent-ink); border-color
 .cg-最吉 { border-color: var(--good); color: var(--good); } .cg-吉 { border-color: #3d8f5f; color: #3d8f5f; }
 .cg-平吉 { border-color: var(--mid); color: var(--mid); } .cg-半吉 { border-color: #c69a3a; color: #a67c1d; }
 .cg-凶 { border-color: var(--bad); color: var(--bad); } .cg-最凶 { border-color: #7a1a10; color: #7a1a10; }
+/* 吉數等級（大吉＋吉＝36 吉數） */
+.jg-大吉 { border-color: var(--good); color: var(--good); } .jg-吉 { border-color: #3d8f5f; color: #3d8f5f; }
+.jg-半吉 { border-color: #c69a3a; color: #a67c1d; } .jg-半凶 { border-color: var(--mid); color: var(--mid); }
+.jg-凶 { border-color: var(--bad); color: var(--bad); }
+label.chip.jg-大吉, label.chip.jg-吉, label.chip.jg-半吉, label.chip.jg-半凶, label.chip.jg-凶 { border: 1px solid currentColor; background: #fff; }
+label.chip small { color: var(--muted); font-size: .7rem; }
 .tianfail { background: #fdecec; color: var(--bad); border-radius: 10px; padding: .5rem .8rem; }
 .tianfail button.chip { margin-left: .4rem; cursor: pointer; }
 .combo-sel { border: 1px dashed var(--accent); border-radius: 12px; padding: .4rem .9rem .6rem; margin: .8rem 0; background: #fffaf3; }

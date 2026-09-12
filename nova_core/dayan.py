@@ -1,4 +1,8 @@
-"""八十一數理（大衍之數）查表（fate internal/wuge/dayan.go → data/tables/dayan81.json）。"""
+"""八十一數理（大衍之數）查表（fate internal/wuge/dayan.go → data/tables/dayan81.json）。
+
+另有「筆畫組合選字」用的 36 吉數（data/tables/jishu36.json）與吉數等級
+（data/tables/jishu_grade.json：大吉／吉／半吉／半凶／凶，大吉＋吉＝36 吉數）。
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -41,3 +45,32 @@ def is_jishu(n: int) -> bool:
     if n <= 0:
         raise ValueError(f'數理必須為正整數: {n}')
     return ((n - 1) % 81) + 1 in jishu()
+
+
+GRADES = ('大吉', '吉', '半吉', '半凶', '凶')   # 吉數等級，由好到壞（data/tables/jishu_grade.json）
+JISHU_GRADES = frozenset({'大吉', '吉'})        # 這兩級合起來恰為 36 吉數
+
+
+@lru_cache(maxsize=None)
+def _grades() -> tuple[str, ...]:
+    t = tables.jishu_grade()
+    return tuple(t['grade'])
+
+
+@lru_cache(maxsize=None)
+def _cdi_grades() -> tuple[str, ...]:
+    return tuple(tables.jishu_grade()['cdi'])
+
+
+def grade(n: int) -> str:
+    """吉數等級（大吉／吉／半吉／半凶／凶）；n 為任一正整數，超過 81 與 find 同法循環。"""
+    if n <= 0:
+        raise ValueError(f'數理必須為正整數: {n}')
+    return _grades()[(n - 1) % 81]
+
+
+def cdi_grade(n: int) -> str:
+    """謝達輝「81 劃吉凶分類表」原級（吉／吉帶凶／凶帶吉／凶），僅供對照顯示。"""
+    if n <= 0:
+        raise ValueError(f'數理必須為正整數: {n}')
+    return _cdi_grades()[(n - 1) % 81]

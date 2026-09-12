@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from nova_core import bazi, chars, rating  # noqa: E402
 from nova_core.generator import Options, generate, lucky_combos  # noqa: E402
-from nova_core.combos import ComboFilter, enumerate_combos  # noqa: E402
+from nova_core.combos import GRIDS, ComboFilter, enumerate_combos  # noqa: E402
 
 OUT = ROOT / 'tests' / 'fixtures'
 SEED = 20260903
@@ -164,17 +164,23 @@ def main() -> None:
             expect = 'ERROR'
         weight_parse.append({'input': spec, 'expect': expect})
 
-    # 筆畫組合選字：謝達輝三才等級 × 36 吉數（含天格）。林 天格 9 非吉數 → 預設 0 列、取消天格 → 有列，兩邊都要一致
+    # 筆畫組合選字：謝達輝三才等級 × 36 吉數（含天格）× 吉數等級（人地外總四格，天格撇除）。
+    # 林 天格 9 非吉數 → 預設 0 列、取消天格 → 有列；陳 天格 17 是「吉」但限大吉仍列得出（天格不受等級管），兩邊都要一致
     combo_table = []
     for s, kw in [('陳', {}), ('李', dict(sancai_grades=frozenset({'最吉', '吉', '平吉'}))), ('歐陽', {}),
                   ('王', dict(grids=('ren', 'di', 'zong'))), ('林', {}), ('林', dict(grids=('ren', 'di', 'wai', 'zong'))),
-                  ('司徒', dict(sancai_grades=frozenset({'最吉', '吉', '平吉', '半吉'}), exclude_female_caution=True))]:
+                  ('司徒', dict(sancai_grades=frozenset({'最吉', '吉', '平吉', '半吉'}), exclude_female_caution=True)),
+                  ('王', dict(jishu_grades=frozenset({'大吉'}))), ('陳', dict(jishu_grades=frozenset({'大吉'}))),
+                  ('林', dict(grids=(), sancai_grades=frozenset({'最吉', '吉', '平吉'}), jishu_grades=frozenset({'大吉', '吉', '半吉'}))),
+                  ('李', dict(grids=('ren', 'di'), jishu_grades=frozenset({'大吉', '吉', '半吉', '半凶'})))]:
         l1, l2 = surname_strokes(s)
         filt = ComboFilter(**kw)
         rows = enumerate_combos(l1, l2, filt)
         combo_table.append({'input': {'l1': l1, 'l2': l2, 'sancai_grades': sorted(filt.sancai_grades), 'grids': list(filt.grids),
+                                      'jishu_grades': sorted(filt.jishu_grades),
                                       'exclude_female_caution': filt.exclude_female_caution},
-                            'expect': {'count': len(rows), 'rows': [[r.f1, r.f2, r.cdi_grade, r.wuge_score] for r in rows]}})
+                            'expect': {'count': len(rows), 'rows': [[r.f1, r.f2, r.cdi_grade, r.wuge_score,
+                                                                     '/'.join(r.grades[k] for k in GRIDS)] for r in rows]}})
 
     golden = {
         'meta': {'generated': date.today().isoformat(), 'seed': SEED, 'chars_version': chars._payload()['version'],

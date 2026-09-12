@@ -22,6 +22,7 @@ FILES = {
     'strokeOverrides': 'stroke_overrides.json',
     'sancaiCdi': 'sancai_cdi.json',
     'jishu': 'jishu36.json',
+    'jishuGrade': 'jishu_grade.json',
 }
 
 
@@ -37,6 +38,11 @@ def load_all() -> dict:
     assert set(out['sancaiCdi']['combos']) == set(out['sancai']['combos'])
     nums = out['jishu']['numbers']
     assert len(nums) == 36 and nums == sorted(set(nums)) and all(isinstance(n, int) and 1 <= n <= 81 for n in nums)
+    jg = out['jishuGrade']
+    assert jg['grades'] == ['大吉', '吉', '半吉', '半凶', '凶'] and jg['jishu_grades'] == ['大吉', '吉']
+    assert len(jg['grade']) == 81 and set(jg['grade']) <= set(jg['grades'])
+    assert len(jg['cdi']) == 81 and set(jg['cdi']) == {'吉', '吉帶凶', '凶帶吉', '凶'}
+    assert {i + 1 for i, g in enumerate(jg['grade']) if g in jg['jishu_grades']} == set(nums)   # 大吉＋吉＝36 吉數
     return out
 
 

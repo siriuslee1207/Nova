@@ -6,7 +6,7 @@ import pytest
 
 from nova_core import dayan, sancai
 from nova_core.cli import main as cli_main
-from nova_core.combos import GRIDS, ComboFilter, char_lists, combo_row, enumerate_combos, group_by_first, tian_of, tian_ok
+from nova_core.combos import GRADE_GRIDS, GRIDS, ComboFilter, char_lists, combo_row, enumerate_combos, group_by_first, tian_of, tian_ok
 from nova_core.rating import rate_wuge
 
 
@@ -23,6 +23,37 @@ def test_jishu_table():
     assert dayan.is_jishu(82) == dayan.is_jishu(1) and dayan.is_jishu(81 + 17)
     with pytest.raises(ValueError):
         dayan.is_jishu(0)
+
+
+def test_jishu_grade_table():
+    t = sancai.tables.jishu_grade()
+    assert tuple(t['grades']) == dayan.GRADES and set(t['jishu_grades']) == dayan.JISHU_GRADES
+    assert len(t['grade']) == len(t['cdi']) == 81
+    counts = Counter(t['grade'])
+    assert counts == {'大吉': 28, '吉': 8, '半吉': 6, '半凶': 14, '凶': 25} == t['counts']
+    assert Counter(t['cdi']) == {'吉': 34, '吉帶凶': 15, '凶帶吉': 4, '凶': 28}
+    # 大吉＋吉 恰為 36 吉數；分級規則可由 dayan81 的 lucky × 謝達輝 81 劃表重新導出
+    assert {n for n in range(1, 82) if dayan.grade(n) in dayan.JISHU_GRADES} == dayan.jishu()
+    for n in range(1, 82):
+        fate, cdi = dayan.find(n).lucky, dayan.cdi_grade(n)
+        if fate == '吉' and cdi == '吉':
+            expect = '大吉'
+        elif dayan.is_jishu(n):
+            expect = '吉'
+        elif fate == '半吉' and cdi in ('吉', '吉帶凶'):
+            expect = '半吉'
+        elif fate == '半吉' or cdi in ('吉帶凶', '凶帶吉'):
+            expect = '半凶'
+        else:
+            expect = '凶'
+        assert dayan.grade(n) == expect, n
+    assert dayan.grade(41) == '大吉' and dayan.grade(17) == '吉' and dayan.grade(73) == '半吉'
+    assert dayan.grade(26) == '半凶' and dayan.grade(9) == '凶' and dayan.cdi_grade(57) == '凶帶吉'
+    assert dayan.grade(82) == dayan.grade(1) and dayan.cdi_grade(81 + 17) == dayan.cdi_grade(17)
+    with pytest.raises(ValueError):
+        dayan.grade(0)
+    with pytest.raises(ValueError):
+        dayan.cdi_grade(-1)
 
 
 def test_cdi_table():
@@ -68,6 +99,28 @@ def test_supersets(l1, l2, grids):
     assert base <= fewer
 
 
+def test_jishu_grade_filter():
+    # 預設（五級全收）＝沒有這條件；逐級收緊必為子集
+    every = pairs(enumerate_combos(4, 0))
+    assert every == pairs(enumerate_combos(4, 0, ComboFilter(jishu_grades=frozenset(dayan.GRADES))))
+    prev = every
+    for keep in (('大吉', '吉', '半吉', '半凶'), ('大吉', '吉', '半吉'), ('大吉', '吉'), ('大吉',)):
+        got = pairs(enumerate_combos(4, 0, ComboFilter(jishu_grades=frozenset(keep))))
+        assert got <= prev
+        prev = got
+    rows = enumerate_combos(4, 0, ComboFilter(jishu_grades=frozenset({'大吉'})))
+    assert len(rows) == 11 and all(r.grades[k] == '大吉' for r in rows for k in GRADE_GRIDS)
+    assert all(r.grades[k] == dayan.grade(getattr(r.ge, k)) for r in rows for k in GRIDS)
+    # 天格撇除：陳 天格 17 是「吉」不是「大吉」，只留大吉時仍要列得出組合（天格不受等級條件管）
+    assert GRADE_GRIDS == tuple(k for k in GRIDS if k != 'tian') and dayan.grade(tian_of(16, 0)) == '吉'
+    chen = enumerate_combos(16, 0, ComboFilter(jishu_grades=frozenset({'大吉'})))
+    assert chen and all(r.grades['tian'] == '吉' and r.grades[k] == '大吉' for r in chen for k in GRADE_GRIDS)
+    # 等級看四格、吉數只看勾選的格：不勾任何格時仍受等級限制，且可留下 36 吉數以外的「半吉」數
+    loose = enumerate_combos(16, 0, ComboFilter(grids=(), jishu_grades=frozenset({'大吉', '吉', '半吉'})))
+    assert loose and any(not all(r.jishu[k] for k in GRIDS) for r in loose)
+    assert all(r.grades[k] in {'大吉', '吉', '半吉'} for r in loose for k in GRADE_GRIDS)
+
+
 def test_female_caution():
     every = enumerate_combos(4, 0)
     kept = enumerate_combos(4, 0, ComboFilter(exclude_female_caution=True))
@@ -99,9 +152,17 @@ def test_cli_combos(capsys):
     assert '天格 9 不在吉數內' in out and '14 組' in out
     cli_main(['林', '--combos', '--grids', '人格,地格,外格,總格'])
     assert '符合 14 組' in capsys.readouterr().out
+    cli_main(['王', '--combos', '--jishu-grades', '大吉'])
+    out = capsys.readouterr().out
+    assert '符合 11 組' in out and '人地外總等級限 大吉' in out
+    cli_main(['陳', '--combos', '--jishu-grades', '大吉'])   # 天格 17 是「吉」，撇除後仍有組合
+    assert '符合 1 組' in capsys.readouterr().out
     cli_main(['陳', '--combos', '--json'])
     data = json.loads(capsys.readouterr().out)
-    assert data['count'] == 16 and data['tian'] == {'n': 17, 'lucky': '半吉', 'title': '剛強', 'jishu': True}
+    assert data['count'] == 16 and data['tian'] == {'n': 17, 'lucky': '半吉', 'title': '剛強', 'jishu': True,
+                                                    'grade': '吉', 'cdi_grade': '吉'}
+    assert data['filter']['jishu_grades'] == list(dayan.GRADES)
+    assert data['groups'][0]['rows'][0]['grades'] == {k: dayan.grade(data['groups'][0]['rows'][0]['ge'][k]) for k in GRIDS}
     assert [g['f1'] for g in data['groups']] == sorted(g['f1'] for g in data['groups'])
     cli_main(['陳', '--combo', '19,6', '--json'])
     data = json.loads(capsys.readouterr().out)
@@ -114,5 +175,7 @@ def test_cli_combos(capsys):
         cli_main(['陳', '--combos', '--sancai-grades', '凶'])
     with pytest.raises(SystemExit):
         cli_main(['陳', '--combos', '--grids', 'xx'])
+    with pytest.raises(SystemExit):
+        cli_main(['陳', '--combos', '--jishu-grades', '最吉'])
     with pytest.raises(SystemExit):
         cli_main(['陳', '--combo', '19'])
