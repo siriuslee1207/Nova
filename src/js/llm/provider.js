@@ -1,19 +1,17 @@
-// LLM 供應商介面與設定（對應 nova_core/llm/base.py）。key 預設只留記憶體；勾選「記住」才進 sessionStorage。
+// LLM 供應商介面與設定（對應 nova_core/llm/base.py）。設定（含 API key）自動存在 localStorage，清空欄位即移除；
+// 注意 file:// 頁面共用同一個 origin，同一瀏覽器開的其他本機 HTML 也讀得到。
 (function (Nova) {
   'use strict';
   const STORE_KEY = 'nova.llm.v1';
-  const DEFAULTS = { provider: 'gemini', model: 'gemini-3.5-flash-lite', apiKey: '', remember: false, thinking: 'auto' };
+  const DEFAULTS = { provider: 'gemini', model: 'gemini-3.5-flash-lite', apiKey: '', thinking: 'auto' };
   const settings = Object.assign({}, DEFAULTS);
   try {
-    const saved = sessionStorage.getItem(STORE_KEY);
-    if (saved) Object.assign(settings, JSON.parse(saved), { remember: true });
+    const saved = localStorage.getItem(STORE_KEY);
+    if (saved) Object.assign(settings, JSON.parse(saved));
   } catch (_) { /* storage unavailable */ }
 
   function save() {
-    try {
-      if (settings.remember) sessionStorage.setItem(STORE_KEY, JSON.stringify(settings));
-      else sessionStorage.removeItem(STORE_KEY);
-    } catch (_) { /* ignore */ }
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(settings)); } catch (_) { /* ignore */ }
   }
   function set(partial) { Object.assign(settings, partial); save(); return settings; }
 

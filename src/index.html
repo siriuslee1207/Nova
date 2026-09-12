@@ -84,16 +84,13 @@
         <label>模型 <input id="ai-model" placeholder="gemini-3.5-flash-lite"></label>
       </div>
       <div class="row"><label>API key <input id="ai-key" type="password" autocomplete="off" placeholder="貼上你自己的 key"></label></div>
-      <div class="row inline">
-        <label class="check"><input id="ai-remember" type="checkbox"> 本分頁記住 key（關閉分頁即清除）</label>
-      </div>
       <div class="row"><label>給 AI 的偏好 <input id="ai-prefs" placeholder="例：希望字義與水、木有關，不要太文言"></label></div>
       <div id="ai-warn" class="chips" aria-live="polite"></div>
       <div class="row inline">
         <button type="button" id="ai-recommend">AI 推薦用字</button>
         <span id="ai-status" class="status" aria-live="polite"></span>
       </div>
-      <p class="hint small">AI 只能從 Nova 已通過五格／三才篩選的字池中挑字，分數一律由 Nova 計算；key 由你的瀏覽器直接送到供應商，不經任何中間伺服器。</p>
+      <p class="hint small">AI 只能從 Nova 已通過五格／三才篩選的字池中挑字，分數一律由 Nova 計算；key 由你的瀏覽器直接送到供應商，不經任何中間伺服器；key 與設定會自動存在這個瀏覽器，清空欄位即移除。</p>
     </div>
   </section>
 

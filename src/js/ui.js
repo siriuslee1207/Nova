@@ -211,7 +211,7 @@
   function aiSync() {
     const p = aiProvider();
     if (!$('#ai-model').value.trim() && p.defaultModel) $('#ai-model').value = p.defaultModel;
-    const s = Nova.llm.set({ provider: p.id, model: $('#ai-model').value.trim(), apiKey: $('#ai-key').value.trim(), remember: $('#ai-remember').checked });
+    const s = Nova.llm.set({ provider: p.id, model: $('#ai-model').value.trim(), apiKey: $('#ai-key').value.trim() });
     const warn = p.keyWarning(s.apiKey);
     $('#ai-warn').innerHTML = warn ? `<span class="chip ${s.apiKey ? 'warn' : ''}">${esc(warn)}</span>` : '';
     const ready = !!s.apiKey;
@@ -227,9 +227,8 @@
     sel.value = s.provider;
     $('#ai-model').value = s.model;
     $('#ai-key').value = s.apiKey;
-    $('#ai-remember').checked = s.remember;
     sel.addEventListener('change', () => { $('#ai-model').value = aiProvider().defaultModel || ''; aiSync(); });
-    for (const id of ['ai-model', 'ai-key', 'ai-remember']) $('#' + id).addEventListener('input', aiSync);
+    for (const id of ['ai-model', 'ai-key']) $('#' + id).addEventListener('input', aiSync);
     $('#ai-recommend').addEventListener('click', onAiRecommend);
     aiSync();
   }

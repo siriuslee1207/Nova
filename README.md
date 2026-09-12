@@ -14,8 +14,9 @@
 可用網址參數預填並自動執行，例如 `nova.html?surname=陳&born=2026-09-03T10:30&gender=girl` 或 `…&explain=冠宇`。
 
 AI 顧問：在左側貼上你自己的 Gemini API key（AI Studio 建立；新式 key 以 `AQ.` 開頭，舊式 `AIza` 已被 Google 停用），
-按「AI 推薦用字」，或在卡片明細中按「AI 解說」。key 由瀏覽器直接送到 Google，不經任何中間伺服器；
-勾「記住」才會存在本分頁的 sessionStorage。免費層每日請求數有限，預設模型 `gemini-3.5-flash-lite`，可自行更換。
+按「AI 推薦用字」，或在卡片明細中按「AI 解說」。key 由瀏覽器直接送到 Google，不經任何中間伺服器。
+key 與模型設定會自動存在這個瀏覽器的 localStorage，下次開啟不用重貼，清空欄位即移除；`file://` 頁面共用同一個 origin，
+同一瀏覽器開的其他本機 HTML 也讀得到，公用電腦請用完清掉。免費層每日請求數有限，預設模型 `gemini-3.5-flash-lite`，可自行更換。
 網頁端只提供 Gemini；GitHub Copilot 沒有可用的 API key，只能走下方命令列。
 
 ## 命令列
