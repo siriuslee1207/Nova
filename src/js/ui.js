@@ -241,6 +241,231 @@
       scores: [r.wenhua, r.wuxing, r.shengxiao, r.wuge, r.yinyun], total: r.total, grade: r.grade };
   }
 
+  // ---------------------------------------------------------------- 筆畫組合選字
+  // 與「產生名字」獨立（核心在 js/core/combos.js）：謝達輝三才等級 → 勾選的格皆為 36 吉數（含天格）→ 依第一字筆畫分組列出
+  // 所有 (第一字, 第二字) 筆畫；點一組 → 兩份字表 → 點第一字＋第二字 → 用現有評分卡評分。過濾條件記在這個瀏覽器。
+  const COMBOS_KEY = 'nova.combos.v1';
+  const GRID_LABEL = { tian: '天格', ren: '人格', di: '地格', wai: '外格', zong: '總格' };
+  const TONES = [['1', 'ˉ', '一聲'], ['2', 'ˊ', '二聲'], ['3', 'ˇ', '三聲'], ['4', 'ˋ', '四聲'], ['0', '˙', '輕聲']];   // yinyun.tone 的值
+  const cstate = { ctx: null, filt: null, rows: [], sel: null, pick: [null, null], wxf: ['', ''], tf: ['', ''], names: [] };
+  let urlCombo = null, urlPick = null;   // 網址 &combo=19,6[&pick=薇宇]：開頁時預先選好組合（與字），供分享與測試
+
+  function loadCombosFilter() {
+    const f = Nova.combos.defaultFilter();
+    try {
+      const s = JSON.parse(localStorage.getItem(COMBOS_KEY));
+      if (s && Array.isArray(s.grades)) {
+        const g = s.grades.filter((x) => Nova.sancai.CDI_SELECTABLE.includes(x));
+        if (g.length) f.sancaiGrades = new Set(g);
+      }
+      if (s && Array.isArray(s.grids)) f.grids = Nova.combos.GRIDS.filter((k) => s.grids.includes(k));
+    } catch (_) { /* ignore */ }
+    return f;
+  }
+  function saveCombosFilter(f) {
+    try { localStorage.setItem(COMBOS_KEY, JSON.stringify({ grades: [...f.sancaiGrades], grids: f.grids })); } catch (_) { /* ignore */ }
+  }
+  const combosMounted = () => !!$('#combos') && !!cstate.ctx;
+
+  function onCombos() {
+    const s = readSurname();
+    if (!s) { $('#surname').focus(); return; }
+    let l1, l2;
+    try { [l1, l2] = surnameStrokes(s.info); } catch (e) { setBusy(false, e.message); return; }
+    state.runId++;                                   // 進行中的 generateAsync 不再回寫結果
+    const fate = readFate();
+    renderBazi(fate);
+    const same = cstate.ctx && cstate.ctx.surname === s.surname && cstate.ctx.l1 === l1 && cstate.ctx.l2 === l2;
+    cstate.ctx = { surname: s.surname, l1, l2, fate, weights: readWeights() };
+    cstate.filt = loadCombosFilter();
+    cstate.filt.excludeFemaleCaution = $('#female-caution').checked;
+    if (!same) { cstate.sel = null; cstate.pick = [null, null]; cstate.names = []; }
+    recomputeCombos();
+    renderCombos();
+    setBusy(false, `${cstate.rows.length} 組合格筆畫組合`);
+    if (urlCombo) {
+      const [f1, f2] = urlCombo.split(/[,+]/).map(Number);
+      cstate.sel = cstate.rows.find((r) => r.f1 === f1 && r.f2 === f2) || null;
+      const cs = urlPick ? [...urlPick].map((ch) => Nova.chars.lookup(ch)) : [];
+      if (cstate.sel && cs.length === 2 && cs[0] && cs[1] && cs[0].stroke === f1 && cs[1].stroke === f2) cstate.pick = cs;
+      urlCombo = urlPick = null;
+      renderGroups(); renderPick(); composeName();
+    }
+    try { history.replaceState(null, '', buildQuery(s.surname) + '&mode=combos'); } catch (_) { /* file:// 在部分瀏覽器不允許 */ }
+  }
+
+  function recomputeCombos() {
+    const { l1, l2 } = cstate.ctx;
+    cstate.rows = Nova.combos.enumerateCombos(l1, l2, cstate.filt);
+    if (cstate.sel && !cstate.rows.some((r) => r.f1 === cstate.sel.f1 && r.f2 === cstate.sel.f2)) { cstate.sel = null; cstate.pick = [null, null]; }
+  }
+
+  function tianBadge() {
+    const { l1, l2 } = cstate.ctx, n = Nova.combos.tianOf(l1, l2), dy = Nova.dayan.find(n), ok = Nova.dayan.isJishu(n);
+    return `天格 <b class="n">${n}</b> <span class="lucky-${esc(dy.lucky)}">${esc(dy.title)}・${esc(dy.lucky)}</span> <span class="${ok ? 'jishu-ok' : 'jishu-bad'}">${ok ? '吉數' : '非吉數'}</span>`;
+  }
+
+  function renderCombos() {
+    const { surname, l1, l2 } = cstate.ctx, f = cstate.filt;
+    registry.clear();
+    const gradeChips = Nova.sancai.CDI_SELECTABLE.map((g) =>
+      `<label class="chip cg-${esc(g)}"><input type="checkbox" data-f="grade" value="${esc(g)}"${f.sancaiGrades.has(g) ? ' checked' : ''}>${esc(g)}</label>`).join('');
+    const gridChips = Nova.combos.GRIDS.map((k) =>
+      `<label class="chip"><input type="checkbox" data-f="grid" value="${k}"${f.grids.includes(k) ? ' checked' : ''}>${GRID_LABEL[k]}${k === 'tian' ? ' ' + Nova.combos.tianOf(l1, l2) : ''}</label>`).join('');
+    const jishu = [...Nova.dayan.jishu()].sort((a, b) => a - b);
+    $('#results').innerHTML = `<section id="combos" class="combos">
+      <div class="combos-head"><h3>筆畫組合選字 <span class="dim">姓 ${esc(surname)} ${l1}${l2 ? '+' + l2 : ''} 畫</span></h3><div class="tian" id="combos-tian">${tianBadge()}</div></div>
+      <div class="combos-filter" id="combos-filter">
+        <div class="frow"><span class="flabel">三才吉凶表（謝達輝）</span>${gradeChips}</div>
+        <div class="frow"><span class="flabel">須為吉數的格</span>${gridChips}<span class="dim small" title="${jishu.join(' ')}">吉數表 ${jishu.length} 個</span></div>
+        <p class="hint small">另沿用左側「字集」「排除字」「排除女性不宜總格」。五格分是原評分（fate 81 數理表），只作排序參考。</p>
+      </div>
+      <div id="combos-groups"></div><div id="combos-pick"></div><div id="combos-names"></div>
+    </section>`;
+    renderGroups(); renderPick(); renderNames();
+  }
+
+  function renderGroups() {
+    const box = $('#combos-groups');
+    if (!box) return;
+    const { l1, l2 } = cstate.ctx, f = cstate.filt, rows = cstate.rows;
+    $('#combos-tian').innerHTML = tianBadge();
+    if (!rows.length && f.grids.includes('tian') && !Nova.combos.tianOk(l1, l2)) {
+      const alt = Nova.combos.enumerateCombos(l1, l2, Object.assign({}, f, { grids: f.grids.filter((k) => k !== 'tian') })).length;
+      box.innerHTML = `<p class="hint tianfail">天格 ${Nova.combos.tianOf(l1, l2)} 不在吉數內；天格由姓氏決定、無法選擇。取消勾選「天格」即可列出其他各格皆吉數的組合（${alt} 組）。<button type="button" class="chip" data-act="drop-tian">取消勾選天格</button></p>`;
+      return;
+    }
+    if (!rows.length) { box.innerHTML = '<p class="hint">沒有符合的組合：請至少勾選一個三才等級，或加入「平吉」、減少須為吉數的格。</p>'; return; }
+    const groups = Nova.combos.groupByFirst(rows);
+    const gradesTxt = Nova.sancai.CDI_SELECTABLE.filter((g) => f.sancaiGrades.has(g)).join('、');
+    const gridsTxt = f.grids.length ? f.grids.map((k) => GRID_LABEL[k][0]).join('') + ' 皆吉數' : '不限吉數';
+    box.innerHTML = `<p class="combos-summary">符合 <b>${rows.length}</b> 組・第一字 ${groups.length} 種筆畫 <span class="dim">（三才 ${esc(gradesTxt)}；${gridsTxt}）點第二字筆畫選定組合</span></p>`
+      + groups.map(([f1, rs]) => `<div class="cgroup"><span class="f1">第一字 ${f1} 畫</span>${rs.map((r) => {
+        const g = r.ge, on = cstate.sel && cstate.sel.f1 === r.f1 && cstate.sel.f2 === r.f2;
+        const marks = Nova.combos.GRIDS.map((k) => GRID_LABEL[k][0] + (r.jishu[k] ? '吉' : '非')).join(' ');
+        return `<button type="button" class="f2 cg-${esc(r.cdiGrade)}${on ? ' on' : ''}" data-f1="${r.f1}" data-f2="${r.f2}" aria-pressed="${on ? 'true' : 'false'}" title="五格 ${g.tian}/${g.ren}/${g.di}/${g.wai}/${g.zong}（${marks}）・三才 ${esc(r.sancaiKey)} ${esc(r.cdiGrade)}（原表 ${esc(r.fateVerdict)}）・五格分 ${r.wugeScore}">${r.f2}<small>${esc(r.cdiGrade)}</small></button>`;
+      }).join('')}</div>`).join('');
+  }
+
+  function geCells(g) {
+    const D = Nova.dayan, W = Nova.wuge;
+    return [['天格', g.tian], ['人格', g.ren], ['地格', g.di], ['外格', g.wai], ['總格', g.zong]].map(([n, v]) => {
+      const dy = D.find(v), ok = D.isJishu(v);
+      return `<div><small>${n}</small><span class="n">${v}</span><small class="lucky-${esc(dy.lucky)}">${esc(dy.title)}・${esc(dy.lucky)}</small><small class="${ok ? 'jishu-ok' : 'jishu-bad'}">${ok ? '吉數' : '非吉數'}・${W.yinyangOf(v)}${W.elementOf(v)}</small></div>`;
+    }).join('');
+  }
+
+  function charListHtml(slot, stroke, list) {
+    const fate = cstate.ctx.fate, wxf = cstate.wxf[slot], tf = cstate.tf[slot], pick = cstate.pick[slot];
+    const toneOf = (c) => String(Nova.yinyun.tone(c.py[0]));   // 以主要讀音的聲調為準；0 = 輕聲
+    const byTone = tf === '' ? list : list.filter((c) => toneOf(c) === tf);   // 只套聲調（供五行按鈕計數）
+    const byWx = wxf ? list.filter((c) => c.wx === wxf) : list;               // 只套五行（供聲調按鈕計數）
+    const shown = byTone.filter((c) => !wxf || c.wx === wxf);
+    const wxChips = ['', ...Nova.bazi.ELEMENTS].map((e) =>
+      `<button type="button" class="chip${wxf === e ? ' on' : ''}" data-slot="${slot}" data-wxf="${e}">${e ? wxTag(e) + e : '全部'}<small>${e ? byTone.filter((c) => c.wx === e).length : byTone.length}</small></button>`).join('');
+    const toneChips = [['', '', '全部'], ...TONES].map(([t, mark, name]) =>
+      `<button type="button" class="chip${tf === t ? ' on' : ''}" data-slot="${slot}" data-tf="${t}">${mark ? '<b class="tm">' + mark + '</b>' : ''}${name}<small>${t === '' ? byWx.length : byWx.filter((c) => toneOf(c) === t).length}</small></button>`).join('');
+    const tiles = shown.map((c) => {
+      const hi = fate && (c.wx === fate.yong || c.wx === fate.xi), lo = fate && (c.wx === fate.ji || c.wx === fate.chou);
+      const on = pick && pick.char === c.char;
+      return `<button type="button" class="ch${hi ? ' hi' : ''}${lo ? ' lo' : ''}${on ? ' on' : ''}" data-slot="${slot}" data-ch="${esc(c.char)}" data-wx="${esc(c.wx)}" title="${esc(c.py.join(' / '))}・${esc(c.wx)}・${esc(c.meaning || '（無釋義）')}">${esc(c.char)}</button>`;
+    }).join('');
+    return `<div class="charlist" data-slot="${slot}"><h4>${slot === 0 ? '第一字' : '第二字'} ${stroke} 畫 <span class="dim">（${shown.length}${shown.length !== list.length ? '／' + list.length : ''} 字）</span></h4>
+      <div class="wxfilter chips"><span class="fl">五行</span>${wxChips}</div>
+      <div class="wxfilter chips"><span class="fl">聲調</span>${toneChips}</div>
+      <div class="chars">${tiles || '<span class="dim">（沒有符合這個五行／聲調的字）</span>'}</div></div>`;
+  }
+
+  function renderPick() {
+    const box = $('#combos-pick');
+    if (!box) return;
+    const r = cstate.sel;
+    if (!r) { box.innerHTML = ''; return; }
+    const S = Nova.sancai, fate = cstate.ctx.fate;
+    const lists = Nova.combos.charLists(r.f1, r.f2, Number($('#level').value), readOptions().avoidChars);
+    cstate.pick = cstate.pick.map((p, i) => (p && lists[i].some((c) => c.char === p.char) ? p : null));   // 改字集／排除字後失效的字丟掉
+    const legend = fate ? `<br>綠框：用神／喜神 ${wxTag(fate.yong)}${wxTag(fate.xi)}；淡化：忌神／仇神 ${wxTag(fate.ji)}${wxTag(fate.chou)}。` : '';
+    box.innerHTML = `<div class="combo-sel">
+      <h4>已選 ${r.f1} + ${r.f2} 畫 <span class="dim">五格分（原評分）${r.wugeScore}</span></h4>
+      <div class="ge">${geCells(r.ge)}</div>
+      <p>三才 ${esc(r.sancaiKey)}・<b class="cg-${esc(r.cdiGrade)}">${esc(r.cdiGrade)}</b> <span class="dim">（原表 ${esc(r.fateVerdict)}）</span><br><span class="dim">${esc(S.detail(r.sancaiKey))}</span></p>
+      <p class="hint small">點一個第一字、再點一個第二字，下方就會出現這個名字的評分；字表可依五行、注音聲調過濾（聲調取主要讀音），滑鼠停在字上看拼音與字義。${legend}</p>
+    </div>
+    <div class="charpick">${charListHtml(0, r.f1, lists[0])}${charListHtml(1, r.f2, lists[1])}</div>`;
+  }
+
+  function renderNames() {
+    const box = $('#combos-names');
+    if (!box) return;
+    if (!cstate.names.length) { box.innerHTML = ''; return; }
+    const ctx = Object.assign({}, cstate.ctx, { weights: readWeights() });
+    const rate = (c1, c2) => Nova.rating.rateName(ctx.l1, ctx.l2, c1, c2, ctx.fate, ctx.weights);
+    box.innerHTML = `<div class="combos-names"><h4>已選名字 <span class="dim">（${cstate.names.length}）</span><button type="button" class="icon" data-act="clear-names">清除</button></h4>`
+      + cstate.names.map(({ c1, c2 }, i) => card(candFromRating(c1, c2, rate(c1, c2)), i, ctx)).join('') + '</div>';
+    const first = box.querySelector('.card');                     // 最新一張直接展開明細
+    if (first) { const { c1, c2 } = cstate.names[0]; first.insertAdjacentHTML('beforeend', detailHtml(rate(c1, c2), c1, c2)); }
+  }
+
+  function composeName() {
+    const [c1, c2] = cstate.pick;
+    if (!c1 || !c2) return;
+    const key = c1.char + c2.char;
+    cstate.names = [{ c1, c2 }, ...cstate.names.filter((n) => n.c1.char + n.c2.char !== key)].slice(0, 30);
+    renderNames();
+    const r = Nova.rating.rateName(cstate.ctx.l1, cstate.ctx.l2, c1, c2, cstate.ctx.fate, readWeights());
+    setBusy(false, `已選 ${cstate.ctx.surname}${key} ${r.total.toFixed(1)}（${r.grade}）`);
+  }
+
+  function onCombosClick(ev) {
+    if (!ev.target.closest('#combos') || ev.target.closest('.card')) return;   // 卡片交給 onResultsClick
+    const b = ev.target.closest('button');
+    if (!b) return;
+    if (b.classList.contains('f2')) {
+      const f1 = Number(b.dataset.f1), f2 = Number(b.dataset.f2);
+      cstate.sel = cstate.rows.find((r) => r.f1 === f1 && r.f2 === f2) || null;
+      cstate.pick = [null, null];
+      renderGroups(); renderPick();
+      const p = $('#combos-pick');
+      if (p && p.scrollIntoView) p.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    if (b.classList.contains('ch')) {
+      const slot = Number(b.dataset.slot), c = Nova.chars.lookup(b.dataset.ch);
+      cstate.pick[slot] = cstate.pick[slot] && cstate.pick[slot].char === c.char ? null : c;
+      b.closest('.chars').querySelectorAll('.ch.on').forEach((x) => x.classList.remove('on'));
+      if (cstate.pick[slot]) b.classList.add('on');
+      composeName();
+      return;
+    }
+    if (b.dataset.wxf !== undefined) { cstate.wxf[Number(b.dataset.slot)] = b.dataset.wxf; renderPick(); return; }
+    if (b.dataset.tf !== undefined) { cstate.tf[Number(b.dataset.slot)] = b.dataset.tf; renderPick(); return; }
+    if (b.dataset.act === 'drop-tian') {
+      cstate.filt.grids = cstate.filt.grids.filter((k) => k !== 'tian');
+      const cb = $('#combos-filter input[data-f="grid"][value="tian"]');
+      if (cb) cb.checked = false;
+      saveCombosFilter(cstate.filt); recomputeCombos(); renderGroups(); renderPick();
+      setBusy(false, `${cstate.rows.length} 組合格筆畫組合`);
+      return;
+    }
+    if (b.dataset.act === 'clear-names') { cstate.names = []; renderNames(); }
+  }
+
+  function onCombosChange(ev) {
+    if (!ev.target.closest('#combos-filter')) return;
+    const f = cstate.filt;
+    f.sancaiGrades = new Set([...document.querySelectorAll('#combos-filter input[data-f="grade"]:checked')].map((i) => i.value));
+    f.grids = [...document.querySelectorAll('#combos-filter input[data-f="grid"]:checked')].map((i) => i.value);
+    saveCombosFilter(f); recomputeCombos(); renderGroups(); renderPick();
+    setBusy(false, `${cstate.rows.length} 組合格筆畫組合`);
+  }
+
+  // 左側條件變動時同步：女性不宜總格 → 重算組合；字集／排除字 → 重畫字表
+  function onCombosSideChange(kind) {
+    if (!combosMounted()) return;
+    if (kind === 'female') { cstate.filt.excludeFemaleCaution = $('#female-caution').checked; recomputeCombos(); renderGroups(); }
+    renderPick();
+  }
+
   // ---------------------------------------------------------------- 單一名字
   function onExplain(ev) {
     ev.preventDefault();
@@ -505,7 +730,7 @@
       $('#born-date').value = d;
       if (t) $('#born-time').value = t; else $('#hour-unknown').checked = true;
     }
-    if (p.get('gender')) $('#gender').value = p.get('gender');
+    if (p.get('gender')) { $('#gender').value = p.get('gender'); $('#female-caution').checked = p.get('gender') === 'girl'; }
     for (const k of ['level', 'strictness', 'method', 'topn', 'perfirst', 'avoid', 'require']) if (p.get(k) != null) $('#' + k).value = p.get(k);
     if (p.get('first')) $('#fixed-first').value = p.get('first');
     if (p.get('second')) $('#fixed-second').value = p.get('second');
@@ -514,6 +739,7 @@
       try { applyWeights(Nova.rating.parseWeights(p.get('weights')) || Nova.rating.DEFAULT_WEIGHTS); $('#weights-box').open = true; }
       catch (e) { setBusy(false, '權重參數看不懂：' + e.message); }
     }
+    if (p.get('mode') === 'combos') { urlCombo = p.get('combo'); urlPick = p.get('pick'); return 'combos'; }
     if (p.get('explain')) { $('#explain-name').value = p.get('explain'); return 'explain'; }
     return p.get('auto') !== '0' ? 'generate' : false;
   }
@@ -527,6 +753,14 @@
     $('#gender').addEventListener('change', () => { $('#female-caution').checked = $('#gender').value === 'girl'; });
     $('#hour-unknown').addEventListener('change', () => { $('#born-time').disabled = $('#hour-unknown').checked; });
     $('#female-caution').checked = $('#gender').value === 'girl';
+    // 筆畫組合選字：性別→「女性不宜」的同步已在上面先註冊，這裡的 change 才讀得到新值（程式改 checked 不會再觸發 change）
+    $('#combos-go').addEventListener('click', onCombos);
+    $('#results').addEventListener('click', onCombosClick);
+    $('#results').addEventListener('change', onCombosChange);
+    for (const id of ['female-caution', 'gender']) $('#' + id).addEventListener('change', () => onCombosSideChange('female'));
+    $('#level').addEventListener('change', () => onCombosSideChange('level'));
+    $('#avoid').addEventListener('input', () => onCombosSideChange('avoid'));
+    $('#surname').addEventListener('input', () => { const s = $('#combos'); if (s) s.classList.add('stale'); });
     const d = Nova.chars.data();
     $('#version').textContent = `字典 ${d.map.size} 字（${d.generated}）・lunar-javascript・Nova 0.1`;
     initWeights();
@@ -534,6 +768,7 @@
     const mode = applyQuery();
     if (mode === 'explain') { readSurname(); onExplain(new Event('submit')); }
     else if (mode === 'generate') { readSurname(); onGenerate(); }
+    else if (mode === 'combos') { readSurname(); onCombos(); }
   }
   document.addEventListener('DOMContentLoaded', init);
 })();

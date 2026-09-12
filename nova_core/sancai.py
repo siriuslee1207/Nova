@@ -27,6 +27,20 @@ def passes(key: str, strictness: str = 'moderate') -> bool:
     return level(key) >= STRICTNESS_MIN_LEVEL[strictness]
 
 
+# 謝達輝表（data/tables/sancai_cdi.json）：另一套三才分級，由好到壞；「筆畫組合選字」以此過濾，原表只作對照。
+CDI_GRADES = ('最吉', '吉', '平吉', '半吉', '凶', '最凶')
+CDI_SELECTABLE = CDI_GRADES[:4]   # UI／CLI 可勾選的等級（凶、最凶不可選）
+
+
+def cdi_grade(key: str) -> str:
+    return tables.sancai_cdi()['combos'][key]['grade']
+
+
+def cdi_no(key: str) -> int:
+    """該站的組別編號 1..125（木木木=1 … 水水水=125）。"""
+    return tables.sancai_cdi()['combos'][key]['no']
+
+
 def detail(key: str) -> str:
     text = tables.sancai_text()['detail'].get(key)
     return text or f'三才{key}配置{verdict(key)}。'

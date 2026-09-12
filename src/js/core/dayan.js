@@ -13,5 +13,13 @@
 
   function isLucky(d, accept) { return (accept || LUCKY_ACCEPT_DEFAULT).has(d.lucky); }
 
-  Nova.dayan = { LUCKY_ACCEPT_DEFAULT, find, isLucky };
+  // 36 吉數（NOVA_TABLES.jishu，使用者指定表）；「筆畫組合選字」以此判定五格，與 lucky 分級無關
+  let jishuSet = null;
+  function jishu() { return jishuSet || (jishuSet = new Set(globalThis.NOVA_TABLES.jishu.numbers)); }
+  function isJishu(n) {
+    if (!(n > 0)) throw new RangeError('數理必須為正整數: ' + n);
+    return jishu().has(((n - 1) % 81) + 1);
+  }
+
+  Nova.dayan = { LUCKY_ACCEPT_DEFAULT, find, isLucky, jishu, isJishu };
 })(globalThis.Nova = globalThis.Nova || {});

@@ -33,3 +33,13 @@ def bazi() -> dict:
 
 def stroke_overrides() -> dict:
     return load('stroke_overrides.json')
+
+
+def sancai_cdi() -> dict:
+    """三才配置吉凶（謝達輝表：最吉／吉／平吉／半吉／凶／最凶），供「筆畫組合選字」過濾。"""
+    return load('sancai_cdi.json')
+
+
+def jishu() -> dict:
+    """36 吉數（使用者指定表），供「筆畫組合選字」判定五格。"""
+    return load('jishu36.json')

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 
 from . import tables
 
@@ -27,3 +28,16 @@ def find(n: int) -> DaYan:
 
 def is_lucky(d: DaYan, accept: frozenset[str] = LUCKY_ACCEPT_DEFAULT) -> bool:
     return d.lucky in accept
+
+
+@lru_cache(maxsize=None)
+def jishu() -> frozenset[int]:
+    """36 吉數（data/tables/jishu36.json，使用者指定表）；「筆畫組合選字」以此判定五格，與 lucky 分級無關。"""
+    return frozenset(tables.jishu()['numbers'])
+
+
+def is_jishu(n: int) -> bool:
+    """n 為任一正整數；超過 81 與 find 同法循環。"""
+    if n <= 0:
+        raise ValueError(f'數理必須為正整數: {n}')
+    return ((n - 1) % 81) + 1 in jishu()

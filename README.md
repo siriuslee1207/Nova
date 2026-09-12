@@ -30,6 +30,24 @@ key 與模型設定會自動存在這個瀏覽器的 localStorage，下次開啟
 「給 AI 的偏好」第一次開啟時帶入一段依寶寶背景（姓李、男孩、屬馬、十月生）寫成的偏好提示：想要的風格、生肖字根偏好、讀音與用字禁忌、風格多樣性、理由寫法，可直接改寫，改過的文字會記在這個瀏覽器，欄位旁的「範本」可帶回；範本文字在 `src/js/defaults.js`。
 「歷史紀錄」會記下每次 AI 推薦的條件、偏好、模型與結果（最多 30 筆，同樣存在這個瀏覽器），可把偏好帶回欄位、修改後重新詢問；重問同一組條件與偏好只會更新同一筆。
 
+### 筆畫組合選字
+
+想先定筆畫格局、再自己挑字，按「筆畫組合選字」：Nova 依姓氏筆畫列出**所有**合格的（第一字, 第二字）筆畫組合，依第一字筆畫分組；
+點一個第二字筆畫，下方就列出兩個筆畫各自的全部候選字（可依五行、注音聲調過濾，聲調取主要讀音；有出生時間時用神／喜神的字加框、忌神／仇神淡化；滑鼠停在字上看拼音與字義），
+點一個第一字、再點一個第二字，立刻用一般的評分卡評分（可展開明細、AI 解說），選過的名字留在下方比較。
+合格標準與「嚴格度」無關，由兩層決定，都可在畫面上調整並記在這個瀏覽器：
+
+- **三才吉凶表**（謝達輝表，見下）：可勾選 最吉／吉／平吉／半吉，預設 最吉＋吉；凶、最凶不列出。
+- **吉數**：勾選的格（預設天格、人格、地格、外格、總格全部）都必須落在 36 吉數
+  `1 3 5 6 7 8 11 13 15 16 17 18 21 23 24 25 29 31 32 33 35 37 39 41 45 47 48 52 55 57 61 63 65 67 68 81`（超過 81 循環）。
+  天格只由姓氏決定：林、張、楊、許、鄭、周、莊、蕭等姓的天格不在吉數內，畫面會提示並可一鍵取消勾選天格，改以其他四格判定。
+
+另沿用左側的「字集」「排除字」「排除女性不宜總格」；網址參數 `nova.html?surname=陳&mode=combos` 可直接開啟這個模式，再加 `&combo=19,6&pick=薇宇` 可預先選好組合與字。
+每組旁的「五格分」仍是原評分（fate 的 81 數理表與三才表），只作排序參考；兩張三才表的分級在明細中並列顯示。
+
+資料來源：三才吉凶表轉錄自中國五術大學 謝達輝姓名學研究所「三才配置吉凶」（cdi.org.tw `n-3-gold.html` 系列五頁，125 組 → `data/tables/sancai_cdi.json`）；
+36 吉數為熊崎氏 81 數理常用吉數（`data/tables/jishu36.json`）。兩張表都可直接編輯後重新 build。
+
 ## 命令列
 
 ```powershell
@@ -38,6 +56,9 @@ key 與模型設定會自動存在這個瀏覽器的 localStorage，下次開啟
 .venv\Scripts\python -m nova_core.cli 陳 --born 2026-09-03T10:30 --explain 冠宇
 .venv\Scripts\python -m nova_core.cli 李 --born 2026-10-15T09:20 --weights "三才五格=1,其他=0"     # 自訂評分權重
 .venv\Scripts\python -m nova_core.cli 李 --born 2026-10-15T09:20 --weights wuge --json             # 同上，預設名稱
+.venv\Scripts\python -m nova_core.cli 陳 --combos                                                  # 筆畫組合選字：列出所有合格筆畫組合
+.venv\Scripts\python -m nova_core.cli 林 --combos --grids ren,di,wai,zong --sancai-grades 最吉,吉,平吉   # 天格非吉數的姓：去掉 tian
+.venv\Scripts\python -m nova_core.cli 陳 --combo 19,6 --level 1                                    # 該組合的兩份字表（--json 可機器讀）
 .venv\Scripts\python -m nova_core.cli 陳 --born 2026-09-03T10:30 --ai recommend --provider gemini     # 需 GEMINI_API_KEY
 .venv\Scripts\python -m nova_core.cli 陳 --born 2026-09-03T10:30 --explain 冠宇 --ai explain --provider copilot
 .venv\Scripts\python -m nova_core.cli 陳 --born 2026-09-03T10:30 --ai recommend --ai-dump              # 只印提示，不呼叫
@@ -73,7 +94,7 @@ node tests\parity.mjs                                  # 或雙擊 tests\parity.
 
 | 路徑 | 內容 |
 |---|---|
-| `data/tables/` | 常數表（單一真相來源）：八十一數理、三才 125 組與解析、八字表、筆畫特例、常見取名用字、排除字、字義覆蓋 |
+| `data/tables/` | 常數表（單一真相來源）：八十一數理、三才 125 組與解析、八字表、筆畫特例、常見取名用字、排除字、字義覆蓋、謝達輝三才吉凶表、36 吉數 |
 | `data/prompts/` | LLM 提示模板（Python 直讀，build 內嵌 JS） |
 | `data/gen/` | 建置產物：`chars.json`/`chars.gen.js`、`tables.gen.js`、`prompts.gen.js`、`etl_report.md` |
 | `nova_core/` | Python 參考實作、CLI、`llm/`（gemini、copilot、advisor） |
@@ -86,7 +107,7 @@ node tests\parity.mjs                                  # 或雙擊 tests\parity.
 
 - 修正：五格「半吉」分支永遠走不到、聲調判斷對調號拼音失效、三才「中吉」等級缺漏導致永遠被過濾、`金金火` 缺項、喜用神方法切換不影響評分。
 - 資料：以 Big5 常用／次常用字為全集（純簡體字自動轉繁）；筆畫改用 Unihan 康熙部首＋餘筆並加姓名學特例（數字字、成 7 等）；拼音以臺灣讀音為主並轉數字調；字義以 OpenCC 轉臺灣正體並人工修正常用字；常用等級分三級（常見取名用字／常用／次常用），數字與虛詞預設不入候選。
-- 新增：時辰不詳模式、同一首字次數上限、指定輩字、姓氏筆畫可手動覆寫、自訂五維評分權重、Python/JS 一致性測試、AI 顧問。
+- 新增：時辰不詳模式、同一首字次數上限、指定輩字、姓氏筆畫可手動覆寫、自訂五維評分權重、筆畫組合選字（三才吉凶表＋吉數先定筆畫格局再選字）、Python/JS 一致性測試、AI 顧問。
 - 五行分數以十分之一整數累加，避免浮點雜訊影響強弱判斷。
 
 分數僅供參考。授權 MIT（`LICENSE`），第三方見 `NOTICE`。

@@ -2,21 +2,25 @@
 
 亦可對單一名字出報告：python -m nova_core.cli 陳 --explain 冠宇 --born 2026-09-03T10:30
 自訂評分權重：python -m nova_core.cli 陳 --weights '三才五格=1,其他=0'
+筆畫組合選字：python -m nova_core.cli 陳 --combos；python -m nova_core.cli 陳 --combo 19,6 --level 1
 """
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime
 
 from . import bazi as bazi_mod
 from . import chars, sancai
+from .combos import GRIDS, ComboFilter, char_lists, combo_row, enumerate_combos, group_by_first, tian_of
 from .dayan import find as find_dayan
+from .dayan import is_jishu
 from .generator import Options, generate
 from .rating import DIM_NAMES, DIMS, GE_NAMES, PRESETS, PRESET_NAMES, is_default_weights, normalize_weights, parse_weights, rate_name, weights_text
-from .wuge import element_of, yinyang_of
+from .wuge import MAX_STROKE, element_of, yinyang_of
 
 
 def parse_born(s: str | None) -> tuple[int, int, int, int | None, int]:
@@ -69,6 +73,14 @@ def build_parser() -> argparse.ArgumentParser:
                         + '，或「三才五格=1,其他=0」「wuge=2」（未列到的維持預設），或五個數字「0,0,0,1,0」'
                           '（順序：文化,五行,生肖,五格,音韻）')
     p.add_argument('--explain', metavar='NAME', help='只對此名字（2 字）輸出完整評分報告')
+    c = p.add_argument_group('筆畫組合選字（謝達輝三才吉凶表＋36 吉數；與 --strictness 無關）')
+    c.add_argument('--combos', action='store_true', help='列出所有合格的（第一字,第二字）筆畫組合，依第一字筆畫分組')
+    c.add_argument('--combo', metavar='F1,F2', help='列出此筆畫組合的兩份字表（配合 --level、--avoid），如 19,6')
+    c.add_argument('--sancai-grades', default='最吉,吉', metavar='GRADES',
+                   help='三才等級（謝達輝表），可選 ' + ','.join(sancai.CDI_SELECTABLE) + '；預設 最吉,吉')
+    c.add_argument('--grids', default=','.join(GRIDS), metavar='GRIDS',
+                   help='須為吉數的格，預設五格全部（tian,ren,di,wai,zong 或 天格,人格,地格,外格,總格）；'
+                        '天格由姓氏決定，天格非吉數時可去掉 tian')
     p.add_argument('--json', action='store_true', help='以 JSON 輸出')
     g = p.add_argument_group('AI 顧問')
     g.add_argument('--ai', choices=['recommend', 'explain'],
@@ -171,6 +183,81 @@ def ai_recommend(args, surname: str, l1: int, l2: int, fate, opt: Options) -> No
         print(f'  ✗ {rj["first"]}{rj["second"]}：{rj["why"]}')
 
 
+def _split_list(s: str) -> list[str]:
+    return [x for x in re.split(r'[,，、\s]+', (s or '').strip()) if x]
+
+
+def combo_filter_from_args(args, female: bool) -> ComboFilter:
+    grades = _split_list(args.sancai_grades)
+    if not grades or any(g not in sancai.CDI_SELECTABLE for g in grades):
+        raise SystemExit('--sancai-grades 只能選 ' + ','.join(sancai.CDI_SELECTABLE) + '（逗號分隔）')
+    aliases = {v: k for k, v in GE_NAMES.items()}
+    grids = [aliases.get(g, g) for g in _split_list(args.grids)]
+    if not grids or any(g not in GRIDS for g in grids):
+        raise SystemExit('--grids 只能選 ' + ','.join(GRIDS) + '（或 ' + ','.join(GE_NAMES.values()) + '）')
+    return ComboFilter(sancai_grades=frozenset(grades), grids=tuple(k for k in GRIDS if k in grids),
+                       exclude_female_caution=female)
+
+
+def _combo_line(r) -> str:
+    g = r.ge
+    marks = ' '.join(GE_NAMES[k][0] + ('✓' if r.jishu[k] else '✗') for k in GRIDS)
+    return (f'{r.f1} + {r.f2} 畫  五格 {g.tian}/{g.ren}/{g.di}/{g.wai}/{g.zong}（吉數 {marks}）'
+            f'  三才 {r.sancai_key} {r.cdi_grade}（原表 {r.fate_verdict}）  五格分 {r.wuge_score}')
+
+
+def combos_cmd(args, surname: str, l1: int, l2: int, filt: ComboFilter) -> None:
+    rows = enumerate_combos(l1, l2, filt)
+    tian = tian_of(l1, l2)
+    td = find_dayan(tian)
+    tian_info = {'n': tian, 'lucky': td.lucky, 'title': td.title, 'jishu': is_jishu(tian)}
+    filt_out = {'sancai_grades': [g for g in sancai.CDI_SELECTABLE if g in filt.sancai_grades], 'grids': list(filt.grids),
+                'exclude_female_caution': filt.exclude_female_caution}
+    head = {'surname': surname, 'l1': l1, 'l2': l2, 'tian': tian_info, 'filter': filt_out}
+    if args.combo:
+        try:
+            parts = [int(x) for x in re.split(r'[,，+＋\s]+', args.combo.strip()) if x]
+        except ValueError:
+            parts = []
+        if len(parts) != 2 or not all(1 <= x <= MAX_STROKE for x in parts):
+            raise SystemExit(f'--combo 需為「第一字筆畫,第二字筆畫」（1–{MAX_STROKE}），如 19,6')
+        f1, f2 = parts
+        row = combo_row(l1, l2, f1, f2)
+        inside = any(r.f1 == f1 and r.f2 == f2 for r in rows)
+        first, second = char_lists(f1, f2, args.level, frozenset(args.avoid))
+        if args.json:
+            print(json.dumps({**head, 'combo': row.as_dict(), 'in_filter': inside,
+                              'first': [asdict(c) for c in first], 'second': [asdict(c) for c in second]},
+                             ensure_ascii=False, indent=1))
+            return
+        print(_combo_line(row) + ('' if inside else '  （不在目前篩選內）'))
+        for label, s, lst in (('第一字', f1, first), ('第二字', f2, second)):
+            print(f'{label} {s} 畫（{len(lst)} 字）：')
+            for i in range(0, len(lst), 20):
+                print('  ' + ' '.join(f'{c.char}[{c.py[0]},{c.wx}]' for c in lst[i:i + 20]))
+        return
+    if args.json:
+        print(json.dumps({**head, 'count': len(rows),
+                          'groups': [{'f1': f1, 'rows': [r.as_dict() for r in rs]} for f1, rs in group_by_first(rows)]},
+                         ensure_ascii=False, indent=1))
+        return
+    print(f"姓 {surname} {l1}{'+' + str(l2) if l2 else ''} 畫  天格 {tian}（{td.title}・{td.lucky}）"
+          f"{'吉數' if tian_info['jishu'] else '非吉數'}")
+    if not rows and 'tian' in filt.grids and not tian_info['jishu']:
+        rest = tuple(k for k in filt.grids if k != 'tian')
+        alt = enumerate_combos(l1, l2, replace(filt, grids=rest))
+        print(f'天格 {tian} 不在吉數內；天格由姓氏決定，加 --grids {",".join(rest)} 即可列出其他各格皆吉數的組合（{len(alt)} 組）')
+        return
+    grades_txt = ','.join(filt_out['sancai_grades'])
+    grids_txt = ''.join(GE_NAMES[k][0] for k in filt.grids) + ' 皆吉數' if filt.grids else '不限吉數'
+    print(f'符合 {len(rows)} 組（三才 {grades_txt}；{grids_txt}）')
+    if not rows:
+        print('  試著加入 平吉 或減少須為吉數的格')
+        return
+    for f1, rs in group_by_first(rows):
+        print(f'第一字 {f1:>2} 畫：' + '  '.join(f'{r.f2}({r.sancai_key} {r.cdi_grade} {r.wuge_score})' for r in rs))
+
+
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     surname, notes = chars.normalize_surname(args.surname)
@@ -193,6 +280,9 @@ def main(argv: list[str] | None = None) -> None:
             ai_explain(args, surname, l1, l2, args.explain, fate, weights)
         return
     female = args.female_caution if args.female_caution is not None else (args.gender == 'girl')
+    if args.combos or args.combo:
+        combos_cmd(args, surname, l1, l2, combo_filter_from_args(args, female))
+        return
     opt = Options(strictness=args.strictness, exclude_female_caution=female, max_level=args.level,
                   avoid_chars=frozenset(args.avoid), require_chars=frozenset(args.require),
                   fixed_first=args.first, fixed_second=args.second, top_n=args.top, per_first_char=args.per_first,

@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(url.fileURLToPath(import.meta.url)), '..'
 const scripts = [
   'data/gen/tables.gen.js', 'data/gen/chars.gen.js', 'src/vendor/lunar.js',
   'src/js/core/wuge.js', 'src/js/core/dayan.js', 'src/js/core/sancai.js', 'src/js/core/yinyun.js',
-  'src/js/core/chars.js', 'src/js/core/rating.js', 'src/js/core/bazi.js', 'src/js/core/generator.js',
+  'src/js/core/chars.js', 'src/js/core/rating.js', 'src/js/core/bazi.js', 'src/js/core/generator.js', 'src/js/core/combos.js',
   'data/gen/prompts.gen.js', 'src/js/llm/provider.js', 'src/js/llm/gemini.js', 'src/js/llm/advisor.js',
   'tests/parity_core.js',
 ];

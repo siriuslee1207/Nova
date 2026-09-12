@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from nova_core import bazi, chars, rating  # noqa: E402
 from nova_core.generator import Options, generate, lucky_combos  # noqa: E402
+from nova_core.combos import ComboFilter, enumerate_combos  # noqa: E402
 
 OUT = ROOT / 'tests' / 'fixtures'
 SEED = 20260903
@@ -163,18 +164,30 @@ def main() -> None:
             expect = 'ERROR'
         weight_parse.append({'input': spec, 'expect': expect})
 
+    # 筆畫組合選字：謝達輝三才等級 × 36 吉數（含天格）。林 天格 9 非吉數 → 預設 0 列、取消天格 → 有列，兩邊都要一致
+    combo_table = []
+    for s, kw in [('陳', {}), ('李', dict(sancai_grades=frozenset({'最吉', '吉', '平吉'}))), ('歐陽', {}),
+                  ('王', dict(grids=('ren', 'di', 'zong'))), ('林', {}), ('林', dict(grids=('ren', 'di', 'wai', 'zong'))),
+                  ('司徒', dict(sancai_grades=frozenset({'最吉', '吉', '平吉', '半吉'}), exclude_female_caution=True))]:
+        l1, l2 = surname_strokes(s)
+        filt = ComboFilter(**kw)
+        rows = enumerate_combos(l1, l2, filt)
+        combo_table.append({'input': {'l1': l1, 'l2': l2, 'sancai_grades': sorted(filt.sancai_grades), 'grids': list(filt.grids),
+                                      'exclude_female_caution': filt.exclude_female_caution},
+                            'expect': {'count': len(rows), 'rows': [[r.f1, r.f2, r.cdi_grade, r.wuge_score] for r in rows]}})
+
     golden = {
         'meta': {'generated': date.today().isoformat(), 'seed': SEED, 'chars_version': chars._payload()['version'],
                  'chars_generated': chars._payload()['generated']},
         'bazi': fates, 'rating': ratings, 'combos': combos, 'generate': gens, 'prompts': prompts,
-        'weight_parse': weight_parse,
+        'weight_parse': weight_parse, 'combo_table': combo_table,
     }
     OUT.mkdir(parents=True, exist_ok=True)
     text = json.dumps(golden, ensure_ascii=False, separators=(',', ':'))
     (OUT / 'golden.json').write_text(text, encoding='utf-8')
     (OUT / 'golden.gen.js').write_text('globalThis.NOVA_GOLDEN = ' + text + ';\n', encoding='utf-8')
     print(f'golden: bazi {len(fates)}, rating {len(ratings)}, combos {len(combos)}, generate {len(gens)}, '
-          f'weights {len(weight_parse)} ({len(text.encode("utf-8")) // 1024} KB)')
+          f'weights {len(weight_parse)}, combo_table {len(combo_table)} ({len(text.encode("utf-8")) // 1024} KB)')
 
 
 def fates_index(f: bazi.FateData, fates: list[dict]) -> dict:

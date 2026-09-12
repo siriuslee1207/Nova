@@ -109,3 +109,52 @@ details.hist { margin-bottom: .7rem; }
 .reason { color: var(--muted); font-size: .9rem; margin-top: .35rem; }
 .ai-text { white-space: pre-wrap; background: #fbf8f1; border-radius: 10px; padding: .6rem .8rem; margin-top: .5rem; min-height: 1.6rem; }
 .ai-text:empty { display: none; }
+/* 筆畫組合選字 */
+.combos h3 { margin: .2rem 0 .3rem; font-size: 1.05rem; color: var(--accent); }
+.combos h4 { margin: .6rem 0 .3rem; font-size: .95rem; color: var(--accent); }
+.combos-head { display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+.combos .tian { font-size: .9rem; color: var(--muted); }
+.combos .tian .n { font-size: 1.1rem; color: var(--ink); }
+.jishu-ok { color: var(--good); } .jishu-bad { color: var(--bad); font-weight: 600; }
+.combos-filter { border: 1px solid var(--line); border-radius: 12px; padding: .5rem .9rem .3rem; background: #fbf8f1; margin: .5rem 0 .8rem; }
+.frow { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin: .25rem 0; }
+.flabel { color: var(--muted); font-size: .85rem; min-width: 8.5rem; }
+label.chip { flex-direction: row; cursor: pointer; color: var(--ink); font-size: .85rem; gap: .25rem; }
+label.chip input { width: auto; margin: 0; }
+label.chip.cg-最吉, label.chip.cg-吉, label.chip.cg-平吉, label.chip.cg-半吉 { border: 1px solid currentColor; background: #fff; }
+.combos-summary { margin: .3rem 0 .5rem; font-size: .9rem; }
+.cgroup { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; border-top: 1px dashed var(--line); padding: .35rem 0; }
+.cgroup .f1 { min-width: 7rem; font-weight: 600; font-size: .9rem; }
+button.f2 { border-radius: 12px; padding: .15rem .55rem; border: 2px solid var(--line); font-weight: 600; line-height: 1.25; display: inline-flex; flex-direction: column; align-items: center; min-width: 3rem; }
+button.f2 small { font-size: .65rem; font-weight: 500; }
+button.f2.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.cg-最吉 { border-color: var(--good); color: var(--good); } .cg-吉 { border-color: #3d8f5f; color: #3d8f5f; }
+.cg-平吉 { border-color: var(--mid); color: var(--mid); } .cg-半吉 { border-color: #c69a3a; color: #a67c1d; }
+.cg-凶 { border-color: var(--bad); color: var(--bad); } .cg-最凶 { border-color: #7a1a10; color: #7a1a10; }
+.tianfail { background: #fdecec; color: var(--bad); border-radius: 10px; padding: .5rem .8rem; }
+.tianfail button.chip { margin-left: .4rem; cursor: pointer; }
+.combo-sel { border: 1px dashed var(--accent); border-radius: 12px; padding: .4rem .9rem .6rem; margin: .8rem 0; background: #fffaf3; }
+.combo-sel p { margin: .3rem 0; font-size: .9rem; }
+.combo-sel .ge small { font-size: .72rem; }
+.charpick { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+@media (max-width: 860px) { .charpick { grid-template-columns: 1fr; } }
+.charlist .wxfilter .chip { cursor: pointer; border: 1px solid transparent; }
+.charlist .wxfilter .chip.on { border-color: var(--accent); background: #fff; }
+.chars { display: flex; flex-wrap: wrap; gap: .25rem; max-height: 22rem; overflow: auto; padding: .4rem; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+button.ch { font-size: 1.15rem; line-height: 1; padding: .35rem .5rem .55rem .4rem; position: relative; border-radius: 8px; }
+button.ch::after { content: ''; position: absolute; right: .15rem; bottom: .15rem; width: .38rem; height: .38rem; border-radius: 50%; background: var(--line); }
+button.ch[data-wx="木"]::after { background: #2e7d32; } button.ch[data-wx="火"]::after { background: #c62828; } button.ch[data-wx="土"]::after { background: #8d6e63; }
+button.ch[data-wx="金"]::after { background: #b8860b; } button.ch[data-wx="水"]::after { background: #1565c0; }
+button.ch.hi { border-color: var(--good); box-shadow: inset 0 0 0 1px var(--good); }
+button.ch.lo { opacity: .45; }
+button.ch.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.combos-names h4 { display: flex; align-items: center; gap: .6rem; }
+.combos-names h4 button.icon { font-size: .8rem; padding: .15rem .5rem; }
+.combos.stale #combos-filter, .combos.stale #combos-groups, .combos.stale #combos-pick { opacity: .45; pointer-events: none; }
+.combos.stale .combos-head::after { content: '姓氏已變更，請重新按「筆畫組合選字」'; color: var(--bad); font-size: .85rem; }
+.actions { flex-wrap: wrap; }
+.actions button { white-space: nowrap; }
+.charlist .fl { color: var(--muted); font-size: .8rem; margin-right: .15rem; }
+.charlist .wxfilter .chip small { color: var(--muted); font-size: .72rem; margin-left: .2rem; }
+.charlist .wxfilter .chip.on small { color: var(--accent); }
+.charlist .tm { font-weight: 700; font-size: 1rem; line-height: 1; margin-right: .1rem; }

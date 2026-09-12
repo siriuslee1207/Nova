@@ -51,3 +51,10 @@
 - 端到端（gpt-5-mini，reasoning low）：`--ai explain` 12.5 s、逐字串流；`--ai recommend` 29 s，8/8 推薦通過 Nova 驗證。每次呼叫都重新啟動 runtime（約 0.4 s），`generate_json` 重試時會啟動第二次。
 - 網頁端移除 Copilot 選項（原為 browser:false 佇位，選了只會顯示說明，反而讓人找 API key）；API key 與模型設定改為自動存 localStorage（原本勾「記住」才進 sessionStorage）。file:// 下所有本機頁面共用同一 origin，已在 README 註明。
 - Gemini `models.list`（GET v1beta/models）從 file:// 直連可行：預檢 200、Access-Control-Allow-Headers 含 x-goog-api-key、Allow-Origin: null；假 key 回 401 UNAUTHENTICATED JSON。網頁端貼 key 後自動抓清單，只留 `gemini-*` 且支援 generateContent，排除 tts／image／audio／live／embedding／robotics／computer-use；成功路徑仍需真 key 驗證。
+
+## 2026-09-12 三才吉凶表（謝達輝）與 36 吉數匯入（筆畫組合選字）
+- 來源：中國五術大學 謝達輝姓名學研究所 http://www.cdi.org.tw/name/n-3-gold.html 及 n-3-wood/fire/earth/water（Big5，只有 HTTP，WebFetch 升 HTTPS 會被拒，改 curl）。解析五頁的「組別／天格／人格／地格／吉凶」表得 125 組 → `data/tables/sancai_cdi.json`。等級分佈：最吉 16／吉 9／平吉 12／半吉 2（木火火、水木火）／凶 67／最凶 19；`no` = 25×天＋5×人＋地＋1（木火土金水序）。同站「81劃論吉凶」為 吉／吉帶凶／凶帶吉／凶 四級（吉 34 個），與 fate 表大致相同但把 8、17、18、25、39、73 列為吉、57 凶帶吉、61 吉帶凶；未採用。
+- 與 fate sancai125 交叉比對：16 個最吉全是 fate 大吉；但 cdi 凶含 6 個 fate 大吉、9 個 fate 中吉，兩表確實不同 → 新模式以 cdi 過濾、fate 只作對照並列顯示，`rate_wuge` 評分不變。
+- 36 吉數（使用者指定）= fate 的 30 個「吉」＋ fate 列「半吉」的 8、17、18、25、39、55（73 不在內；無任何 fate 凶數）→ `data/tables/jishu36.json`，`dayan.is_jishu(n)` 與 `find` 同法循環。
+- 合格組合數（最吉＋吉、五格含天格皆吉數）：陳 16、李 16、王 41、黃 33、劉 28、蔡 12、歐陽 21、司徒 32、張簡 4；加平吉／半吉多約 20–50%。天格非吉數的常見姓：林(9)、張(12)、楊(14)、許(12)、鄭(20)、周(9)、莊(14)、蕭(19)、戴(19) → 預設 0 組，取消天格後 3–19 組；UI／CLI 都提示並可一鍵去掉天格。
+- 決策：篩選鏈獨立成 `nova_core/combos.py` ↔ `src/js/core/combos.js`（`enumerate_combos`，f1、f2 升冪），`generator.lucky_combos` 與既有 parity 案例不動；parity 新增 `combo_table` 7 案（含 林 天格不吉→0 列、取消天格→14 列）。UI 過濾條件存 `nova.combos.v1`。

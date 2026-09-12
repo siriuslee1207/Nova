@@ -18,5 +18,12 @@
   function chenggong(renEl, tianEl) { return text().chenggong[renEl + tianEl] || ''; } // 成功運（人×天）
   function renji(renEl, waiEl) { return text().renji[renEl + waiEl] || ''; }       // 人際（人×外）
 
-  Nova.sancai = { STRICTNESS_MIN_LEVEL, keyOf, verdict, level, passes, detail, jichu, chenggong, renji };
+  // 謝達輝表（NOVA_TABLES.sancaiCdi）：另一套三才分級，由好到壞；「筆畫組合選字」以此過濾，原表只作對照。
+  const CDI_GRADES = ['最吉', '吉', '平吉', '半吉', '凶', '最凶'];
+  const CDI_SELECTABLE = CDI_GRADES.slice(0, 4);   // UI／CLI 可勾選的等級（凶、最凶不可選）
+  const cdi = () => globalThis.NOVA_TABLES.sancaiCdi.combos;
+  function cdiGrade(key) { return cdi()[key].grade; }
+  function cdiNo(key) { return cdi()[key].no; }     // 該站組別 1..125
+
+  Nova.sancai = { STRICTNESS_MIN_LEVEL, CDI_GRADES, CDI_SELECTABLE, keyOf, verdict, level, passes, detail, jichu, chenggong, renji, cdiGrade, cdiNo };
 })(globalThis.Nova = globalThis.Nova || {});

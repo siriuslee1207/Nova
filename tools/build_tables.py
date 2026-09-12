@@ -20,6 +20,8 @@ FILES = {
     'sancaiText': 'sancai_text.json',
     'bazi': 'bazi_tables.json',
     'strokeOverrides': 'stroke_overrides.json',
+    'sancaiCdi': 'sancai_cdi.json',
+    'jishu': 'jishu36.json',
 }
 
 
@@ -30,6 +32,11 @@ def load_all() -> dict:
             out[key] = json.load(f)
     assert len(out['dayan']) == 81
     assert len(out['sancai']['combos']) == 125
+    assert len(out['sancaiCdi']['combos']) == 125
+    assert out['sancaiCdi']['grades'] == ['最吉', '吉', '平吉', '半吉', '凶', '最凶']
+    assert set(out['sancaiCdi']['combos']) == set(out['sancai']['combos'])
+    nums = out['jishu']['numbers']
+    assert len(nums) == 36 and nums == sorted(set(nums)) and all(isinstance(n, int) and 1 <= n <= 81 for n in nums)
     return out
 
 
