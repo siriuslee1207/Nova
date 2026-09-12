@@ -31,7 +31,6 @@
   function ensureReady() {
     const p = current();
     if (!p) throw new Error('未知的供應商 ' + settings.provider);
-    if (!p.browser) throw new Error(p.note || '此供應商無法在瀏覽器直接使用');
     if (!settings.apiKey) throw new Error('請先貼上 API key');
     return p;
   }

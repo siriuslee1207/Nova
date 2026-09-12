@@ -93,9 +93,6 @@
     return { data: parsed, raw: text, usage: data.usageMetadata };
   }
 
-  Nova.llm.register({ id: 'gemini', label: 'Google Gemini（AI Studio）', browser: true, defaultModel: 'gemini-3.5-flash-lite',
+  Nova.llm.register({ id: 'gemini', label: 'Google Gemini（AI Studio）', defaultModel: 'gemini-3.5-flash-lite',
     keyWarning, streamText, generateJson });
-  Nova.llm.register({ id: 'copilot', label: 'GitHub Copilot（僅 Python CLI）', browser: false, defaultModel: '',
-    note: 'GitHub Copilot 的官方程式介面是本機 Copilot SDK/CLI，瀏覽器無法直接呼叫；請用 python -m nova_core.cli … --ai --provider copilot。',
-    keyWarning: () => '' });
 })(globalThis.Nova = globalThis.Nova || {});

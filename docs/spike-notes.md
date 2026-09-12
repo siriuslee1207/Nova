@@ -49,3 +49,4 @@
 - SDK 的 `mode="empty"` 不能用：它會對 runtime 設 `COPILOT_DISABLE_KEYTAR=1`，讀不到憑證庫裡的登入（即使 `base_directory` 指回 `~/.copilot` 也一樣，且未登入時 `list_models` 直接拋錯）。改在預設模式下逐項關閉：`available_tools=[]`、`system_message={'mode': 'replace'}`、`skip_custom_instructions=True`、`enable_session_store=False`、`memory={'enabled': False}`、`enable_skills=False`。
 - 未登入時事件序列為 SessionErrorData → AssistantIdleData → SessionIdleData，舊版 provider 只等 idle 會回空字串；現在收到 SessionErrorData 就拋 RuntimeError。模型名稱錯誤在 `session.create` 就被拒（`Model "x" is not available`）。SDK 版本漂移（ImportError/AttributeError/TypeError）才退回 CLI 子程序，CLI 路徑優先 PATH、其次 SDK 快取。
 - 端到端（gpt-5-mini，reasoning low）：`--ai explain` 12.5 s、逐字串流；`--ai recommend` 29 s，8/8 推薦通過 Nova 驗證。每次呼叫都重新啟動 runtime（約 0.4 s），`generate_json` 重試時會啟動第二次。
+- 網頁端移除 Copilot 選項（原為 browser:false 佇位，選了只會顯示說明，反而讓人找 API key）。

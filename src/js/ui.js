@@ -212,9 +212,9 @@
     const p = aiProvider();
     if (!$('#ai-model').value.trim() && p.defaultModel) $('#ai-model').value = p.defaultModel;
     const s = Nova.llm.set({ provider: p.id, model: $('#ai-model').value.trim(), apiKey: $('#ai-key').value.trim(), remember: $('#ai-remember').checked });
-    const warn = p.browser ? p.keyWarning(s.apiKey) : p.note;
-    $('#ai-warn').innerHTML = warn ? `<span class="chip ${p.browser && s.apiKey ? 'warn' : ''}">${esc(warn)}</span>` : '';
-    const ready = !!(p.browser && s.apiKey);
+    const warn = p.keyWarning(s.apiKey);
+    $('#ai-warn').innerHTML = warn ? `<span class="chip ${s.apiKey ? 'warn' : ''}">${esc(warn)}</span>` : '';
+    const ready = !!s.apiKey;
     $('#ai-recommend').disabled = !ready;
     document.body.classList.toggle('ai-ready', ready);
     document.querySelectorAll('.ai-explain').forEach((b) => { b.disabled = !ready; });
