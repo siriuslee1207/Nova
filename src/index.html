@@ -67,8 +67,10 @@
       </details>
       <div class="row actions">
         <button type="submit" id="go" class="primary">產生名字</button>
+        <button type="button" id="apply-template">套用範本</button>
         <span id="status" class="status" aria-live="polite"></span>
       </div>
+      <p id="template-note" class="hint small" hidden></p>
     </form>
 
     <h2>單一名字評分</h2>
@@ -125,6 +127,7 @@
 <script src="js/llm/gemini.js"></script>
 <script src="js/llm/advisor.js"></script>
 <script src="js/ai_history.js"></script>
+<script src="js/defaults.js"></script>
 <script src="js/ui.js"></script>
 </body>
 </html>
