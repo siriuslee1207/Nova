@@ -26,7 +26,9 @@
     return out;
   }
 
+  // opt 可只給部分欄位（如 ui.js 的 readOptions），缺的補預設；對應 Python 的 Options dataclass 一定有預設值。
   function luckyCombos(l1, l2, opt) {
+    opt = Object.assign(defaultOptions(), opt);
     const need = DAYAN_NEED[opt.strictness];
     const out = [];
     for (let f1 = opt.minStroke; f1 <= opt.maxStroke; f1++) {
