@@ -94,7 +94,6 @@
     let l1, l2;
     try { [l1, l2] = surnameStrokes(s.info); } catch (e) { setBusy(false, e.message); return; }
     setBusy(true, '計算中…');
-    saveForm();
     $('#results').innerHTML = '<div class="progress"><b id="pbar"></b></div>';
     const runId = ++state.runId;
     (async () => {
@@ -285,6 +284,7 @@
     $('#ai-models-refresh').addEventListener('click', () => aiLoadModels(true));
     $('#ai-recommend').addEventListener('click', onAiRecommend);
     $('#ai-history-list').addEventListener('click', onHistoryClick);
+    initPrefs();
     renderHistory();
     aiSync();
     aiLoadModels(false);
@@ -307,7 +307,7 @@
       if (!combos.length) throw new Error('沒有合格的筆畫組合，請放寬嚴格度');
       const buckets = Nova.chars.byStroke(opt.maxLevel);
       const prefs = $('#ai-prefs').value.trim();
-      saveForm();
+      savePrefs();
       hid = Nova.aiHistory.add({ surname: s.surname, gender: opt.gender, born: bornSummary(), model: Nova.llm.settings().model, prefs });
       renderHistory();
       const req = Nova.advisor.buildRecommend({ surname: s.surname, l1, l2, gender: opt.gender, fate, combos, buckets, n: 8, preferences: prefs });
@@ -325,6 +325,25 @@
       renderHistory();
       aiSync();
     }
+  }
+
+  // ---------------------------------------------------------------- 給 AI 的偏好：範本文字與記憶
+  // 第一次開（沒存過）填 js/defaults.js 的範本；之後記住使用者改過的文字（清空也算），「範本」按鈕帶回範本。
+  const PREFS_KEY = 'nova.ai.prefs.v1';
+  function templatePrefs() { return (Nova.template && Nova.template.prefs) || ''; }
+  function savePrefs() {
+    try { localStorage.setItem(PREFS_KEY, $('#ai-prefs').value); } catch (_) { /* ignore */ }
+  }
+  function initPrefs() {
+    let saved = null;
+    try { saved = localStorage.getItem(PREFS_KEY); } catch (_) { /* ignore */ }
+    $('#ai-prefs').value = saved !== null ? saved : templatePrefs();
+    $('#ai-prefs').addEventListener('change', savePrefs);
+    $('#ai-prefs-template').addEventListener('click', () => {
+      $('#ai-prefs').value = templatePrefs();
+      savePrefs();
+      $('#ai-prefs').focus();
+    });
   }
 
   // ---------------------------------------------------------------- 歷史紀錄（資料層在 js/ai_history.js）
@@ -373,6 +392,7 @@
       const h = Nova.aiHistory.list().find((x) => x.id === id);
       if (!h) return;
       $('#ai-prefs').value = h.prefs;
+      savePrefs();
       $('#ai-prefs').focus();
       $('#ai-status').textContent = '已帶回偏好，修改後按「AI 推薦用字」重新詢問';
     }
@@ -429,44 +449,6 @@
     return p.get('auto') !== '0' ? 'generate' : false;
   }
 
-  // ---------------------------------------------------------------- 範本與上次條件（預設使用者）
-  // 沒有網址參數時：有上次留下的條件就還原並直接產生，否則帶入 js/defaults.js 的範本；「套用範本」可隨時帶回。
-  const FORM_KEY = 'nova.form.v1';
-  function fillForm(f) {
-    $('#surname').value = f.surname || '';
-    $('#gender').value = f.gender || 'boy';
-    $('#female-caution').checked = $('#gender').value === 'girl';
-    $('#born-date').value = f.bornDate || '';
-    $('#born-time').value = f.bornTime || '';
-    $('#hour-unknown').checked = !!f.hourUnknown;
-    $('#born-time').disabled = $('#hour-unknown').checked;
-    $('#ai-prefs').value = f.prefs || '';
-    readSurname();
-  }
-  function saveForm() {
-    const f = { surname: $('#surname').value.trim(), gender: $('#gender').value, bornDate: $('#born-date').value,
-      bornTime: $('#born-time').value, hourUnknown: $('#hour-unknown').checked, prefs: $('#ai-prefs').value.trim() };
-    try { localStorage.setItem(FORM_KEY, JSON.stringify(f)); } catch (_) { /* ignore */ }
-  }
-  function restoreForm() {
-    try {
-      const f = JSON.parse(localStorage.getItem(FORM_KEY) || 'null');
-      if (!f || !f.surname) return false;
-      fillForm(f);
-      return true;
-    } catch (_) { return false; }
-  }
-  function applyTemplate() {
-    const t = Nova.template;
-    if (!t) return;
-    fillForm(t);
-    saveForm();
-    const note = $('#template-note');
-    note.textContent = t.note || '';
-    note.hidden = !t.note;
-    onGenerate();
-  }
-
   // ---------------------------------------------------------------- init
   function init() {
     $('#form').addEventListener('submit', onGenerate);
@@ -479,17 +461,9 @@
     const d = Nova.chars.data();
     $('#version').textContent = `字典 ${d.map.size} 字（${d.generated}）・lunar-javascript・Nova 0.1`;
     aiInit();
-    $('#apply-template').addEventListener('click', applyTemplate);
-    $('#apply-template').title = Nova.template ? '帶入預設範本：' + Nova.template.label : '';
-    $('#ai-prefs').addEventListener('change', saveForm);
-    $('#born-date').addEventListener('change', () => { $('#template-note').hidden = true; });
     const mode = applyQuery();
     if (mode === 'explain') { readSurname(); onExplain(new Event('submit')); }
     else if (mode === 'generate') { readSurname(); onGenerate(); }
-    else if (!location.search) {
-      if (restoreForm()) { if ($('#surname').value) onGenerate(); }
-      else applyTemplate();
-    }
   }
   document.addEventListener('DOMContentLoaded', init);
 })();
