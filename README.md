@@ -29,7 +29,17 @@ AI 顧問：在左側貼上你自己的 Gemini API key（AI Studio 建立；新�
 ```
 
 Copilot 走官方 `github-copilot-sdk`（或 PATH 上的 `copilot` CLI），沿用你已登入的 Copilot 訂閱；
-Nova 不使用 IDE 內部端點（無公開文件且有帳號停權案例）。
+Nova 不使用 IDE 內部端點（無公開文件且有帳號停權案例）。SDK 首次使用會自動下載 CLI runtime（約 160 MB）到
+`%LOCALAPPDATA%\github-copilot-sdk\cli\<版本>\copilot.exe`，之後登入一次即可：
+
+```powershell
+.venv\Scripts\python -m copilot download-runtime                          # 可省略，首次呼叫會自動下載
+& "$env:LOCALAPPDATA\github-copilot-sdk\cli\1.0.79\copilot.exe" login     # 瀏覽器 OAuth；遠端環境加 --device-code
+```
+
+或設環境變數 `COPILOT_GITHUB_TOKEN`（fine-grained PAT，需 Copilot Requests 權限；classic `ghp_` 不支援）。
+VS Code 內的 Copilot 登入不會共用給 CLI。預設模型 `gpt-5-mini`（reasoning low），可用 `--model` 換成
+`claude-haiku-4.5`、`gpt-5.4-mini` 等；session 不開任何工具、不讀 AGENTS.md、不寫入 Copilot 的 session 紀錄與記憶。
 
 ## 開發
 
