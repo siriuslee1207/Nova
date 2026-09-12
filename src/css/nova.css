@@ -75,6 +75,11 @@ button:disabled { opacity: .6; cursor: progress; }
 .progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin: .6rem 0; }
 .progress b { display: block; height: 100%; width: 0; background: var(--accent); transition: width .1s; }
 .hint.small { font-size: .8rem; margin: .4rem 0 0; }
+.with-btn { display: flex; gap: .3rem; }
+.with-btn input { flex: 1; min-width: 0; }
+button.icon { padding: 0 .6rem; line-height: 1; }
+.status.small { font-size: .8rem; margin: -.25rem 0 .3rem; }
+.status.small:empty { display: none; }
 .ai .chips .chip { white-space: normal; border-radius: 10px; line-height: 1.4; }
 #ai-picks { border: 1px dashed var(--accent); border-radius: 12px; padding: .4rem .8rem .6rem; margin-bottom: 1rem; background: #fffaf3; }
 #ai-picks h3 { margin: .3rem 0 .2rem; font-size: 1rem; color: var(--accent); }

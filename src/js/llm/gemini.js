@@ -31,6 +31,7 @@
     const reason = err && Array.isArray(err.details) ? err.details.map((d) => d.reason).filter(Boolean).join(',') : '';
     let msg = 'Gemini HTTP ' + res.status + (err ? ' ' + (err.status || '') + ': ' + (err.message || '') : '');
     if (reason === 'API_KEY_INVALID') msg = 'API key 無效（400 API_KEY_INVALID）。請確認貼上的是 AI Studio 的新式 key。';
+    else if (res.status === 401) msg = 'API key 無法通過驗證（401）。請確認 key 完整無誤，且是 AI Studio 建立的新式 key（AQ. 開頭）。';
     else if (res.status === 429) {
       msg = /per day|daily|PerDay|RPD/i.test((err && err.message) || '')
         ? '已達此模型的每日請求上限（RPD），要等到太平洋時間午夜才重置；可改用其他模型（如 gemini-3.5-flash-lite）。'
@@ -93,6 +94,29 @@
     return { data: parsed, raw: text, usage: data.usageMetadata };
   }
 
+  // models.list：這把 key 可用、支援 generateContent 的 gemini 文字模型，新版在前；排除 tts／image／audio／live／embedding 等非文字模型。
+  // GET 只帶 x-goog-api-key，預檢已確認放行（見 docs/spike-notes.md）；分頁跟 nextPageToken。
+  const NON_TEXT = /-tts\b|image|audio|live|embedding|robotics|computer-use|veo|imagen/;
+  function version(id) { const m = /^gemini-(\d+(?:\.\d+)?)/.exec(id); return m ? parseFloat(m[1]) : 0; }
+  async function listModels({ settings, signal }) {
+    const out = [];
+    let token = '';
+    do {
+      const url = BASE.slice(0, -1) + '?pageSize=200' + (token ? '&pageToken=' + encodeURIComponent(token) : '');
+      const res = await fetch(url, { headers: { 'x-goog-api-key': settings.apiKey }, signal });
+      if (!res.ok) throw await toError(res);
+      const data = await res.json();
+      for (const m of data.models || []) {
+        const id = String(m.name || '').replace(/^models\//, '');
+        if (!id.startsWith('gemini-') || NON_TEXT.test(id)) continue;
+        if (!(m.supportedGenerationMethods || []).includes('generateContent')) continue;
+        out.push({ id, label: m.displayName || id, inputTokenLimit: m.inputTokenLimit, outputTokenLimit: m.outputTokenLimit });
+      }
+      token = data.nextPageToken || '';
+    } while (token);
+    return out.sort((a, b) => version(b.id) - version(a.id) || a.id.localeCompare(b.id));
+  }
+
   Nova.llm.register({ id: 'gemini', label: 'Google Gemini（AI Studio）', defaultModel: 'gemini-3.5-flash-lite',
-    keyWarning, streamText, generateJson });
+    keyWarning, streamText, generateJson, listModels });
 })(globalThis.Nova = globalThis.Nova || {});

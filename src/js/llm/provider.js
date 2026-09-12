@@ -34,6 +34,7 @@
   }
   function streamText(opts) { return ensureReady().streamText(Object.assign({ settings }, opts)); }
   function generateJson(opts) { return ensureReady().generateJson(Object.assign({ settings }, opts)); }
+  function listModels(opts) { const p = ensureReady(); return p.listModels ? p.listModels(Object.assign({ settings }, opts)) : Promise.resolve(null); }
 
-  Nova.llm = { DEFAULTS, settings: () => settings, set, providers, register, current, render, streamText, generateJson };
+  Nova.llm = { DEFAULTS, settings: () => settings, set, providers, register, current, render, streamText, generateJson, listModels };
 })(globalThis.Nova = globalThis.Nova || {});

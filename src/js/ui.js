@@ -220,6 +220,28 @@
     document.querySelectorAll('.ai-explain').forEach((b) => { b.disabled = !ready; });
   }
 
+  // 模型清單：有 key 就向供應商抓一次（同一把 key 不重抓，舊式 key 不白抓）；↻ 強制重抓。清單進 datalist，欄位仍可自行輸入。
+  let modelsKey = '', modelsTimer = null;
+  async function aiLoadModels(force) {
+    const p = aiProvider(), s = Nova.llm.settings(), st = $('#ai-models-status');
+    if (!s.apiKey || !p.listModels) { st.textContent = ''; return; }
+    if (!force && (modelsKey === s.apiKey || p.keyWarning(s.apiKey))) return;
+    modelsKey = s.apiKey;
+    st.textContent = '抓取可用模型…';
+    $('#ai-models-refresh').disabled = true;
+    try {
+      const models = await Nova.llm.listModels();
+      $('#ai-models').innerHTML = models.map((m) => `<option value="${esc(m.id)}">${esc(m.label)}</option>`).join('');
+      const cur = $('#ai-model').value.trim();
+      st.textContent = `${models.length} 個可用模型，點模型欄位可選` + (cur && !models.some((m) => m.id === cur) ? `；目前的「${cur}」不在清單中` : '');
+    } catch (e) {
+      modelsKey = '';
+      st.textContent = '抓不到模型清單：' + e.message;
+    } finally {
+      $('#ai-models-refresh').disabled = false;
+    }
+  }
+
   function aiInit() {
     const sel = $('#ai-provider');
     sel.innerHTML = Object.values(Nova.llm.providers).map((p) => `<option value="${p.id}">${esc(p.label)}</option>`).join('');
@@ -229,8 +251,11 @@
     $('#ai-key').value = s.apiKey;
     sel.addEventListener('change', () => { $('#ai-model').value = aiProvider().defaultModel || ''; aiSync(); });
     for (const id of ['ai-model', 'ai-key']) $('#' + id).addEventListener('input', aiSync);
+    $('#ai-key').addEventListener('input', () => { clearTimeout(modelsTimer); modelsTimer = setTimeout(() => aiLoadModels(false), 700); });
+    $('#ai-models-refresh').addEventListener('click', () => aiLoadModels(true));
     $('#ai-recommend').addEventListener('click', onAiRecommend);
     aiSync();
+    aiLoadModels(false);
   }
 
   async function onAiRecommend() {

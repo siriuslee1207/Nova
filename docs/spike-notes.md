@@ -50,3 +50,4 @@
 - 未登入時事件序列為 SessionErrorData → AssistantIdleData → SessionIdleData，舊版 provider 只等 idle 會回空字串；現在收到 SessionErrorData 就拋 RuntimeError。模型名稱錯誤在 `session.create` 就被拒（`Model "x" is not available`）。SDK 版本漂移（ImportError/AttributeError/TypeError）才退回 CLI 子程序，CLI 路徑優先 PATH、其次 SDK 快取。
 - 端到端（gpt-5-mini，reasoning low）：`--ai explain` 12.5 s、逐字串流；`--ai recommend` 29 s，8/8 推薦通過 Nova 驗證。每次呼叫都重新啟動 runtime（約 0.4 s），`generate_json` 重試時會啟動第二次。
 - 網頁端移除 Copilot 選項（原為 browser:false 佇位，選了只會顯示說明，反而讓人找 API key）；API key 與模型設定改為自動存 localStorage（原本勾「記住」才進 sessionStorage）。file:// 下所有本機頁面共用同一 origin，已在 README 註明。
+- Gemini `models.list`（GET v1beta/models）從 file:// 直連可行：預檢 200、Access-Control-Allow-Headers 含 x-goog-api-key、Allow-Origin: null；假 key 回 401 UNAUTHENTICATED JSON。網頁端貼 key 後自動抓清單，只留 `gemini-*` 且支援 generateContent，排除 tts／image／audio／live／embedding／robotics／computer-use；成功路徑仍需真 key 驗證。
