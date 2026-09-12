@@ -80,6 +80,16 @@ button:disabled { opacity: .6; cursor: progress; }
 button.icon { padding: 0 .6rem; line-height: 1; }
 .status.small { font-size: .8rem; margin: -.25rem 0 .3rem; }
 .status.small:empty { display: none; }
+details.hist { margin-bottom: .7rem; }
+.hist-item { border-top: 1px solid var(--line); padding: .45rem 0; font-size: .85rem; }
+.hist-item:first-child { border-top: 0; }
+.hist-meta { color: var(--muted); font-size: .78rem; }
+.hist-prefs { white-space: pre-wrap; margin: .15rem 0; }
+.hist-result { color: var(--muted); }
+.hist .bad { color: var(--bad); }
+.hist .dim { color: var(--muted); }
+.hist-actions { display: flex; gap: .4rem; margin-top: .3rem; }
+.hist-actions button { padding: .2rem .6rem; font-size: .8rem; }
 .ai .chips .chip { white-space: normal; border-radius: 10px; line-height: 1.4; }
 #ai-picks { border: 1px dashed var(--accent); border-radius: 12px; padding: .4rem .8rem .6rem; margin-bottom: 1rem; background: #fffaf3; }
 #ai-picks h3 { margin: .3rem 0 .2rem; font-size: 1rem; color: var(--accent); }

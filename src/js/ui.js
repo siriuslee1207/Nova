@@ -283,6 +283,8 @@
     $('#ai-key').addEventListener('input', () => { clearTimeout(modelsTimer); modelsTimer = setTimeout(() => aiLoadModels(false), 700); });
     $('#ai-models-refresh').addEventListener('click', () => aiLoadModels(true));
     $('#ai-recommend').addEventListener('click', onAiRecommend);
+    $('#ai-history-list').addEventListener('click', onHistoryClick);
+    renderHistory();
     aiSync();
     aiLoadModels(false);
   }
@@ -295,6 +297,7 @@
     const btn = $('#ai-recommend');
     btn.disabled = true;
     $('#ai-status').textContent = 'AI 思考中…';
+    let hid = null;
     try {
       const fate = readFate();
       renderBazi(fate);
@@ -302,18 +305,74 @@
       const combos = Nova.generator.luckyCombos(l1, l2, opt);
       if (!combos.length) throw new Error('沒有合格的筆畫組合，請放寬嚴格度');
       const buckets = Nova.chars.byStroke(opt.maxLevel);
-      const req = Nova.advisor.buildRecommend({ surname: s.surname, l1, l2, gender: opt.gender, fate, combos, buckets, n: 8,
-        preferences: $('#ai-prefs').value.trim() });
+      const prefs = $('#ai-prefs').value.trim();
+      hid = Nova.aiHistory.add({ surname: s.surname, gender: opt.gender, born: bornSummary(), model: Nova.llm.settings().model, prefs });
+      renderHistory();
+      const req = Nova.advisor.buildRecommend({ surname: s.surname, l1, l2, gender: opt.gender, fate, combos, buckets, n: 8, preferences: prefs });
       const { data, usage } = await Nova.llm.generateJson({ system: req.system, user: req.user, schema: Nova.advisor.PICKS_SCHEMA });
       const { ok, rejected } = Nova.advisor.validatePicks(data.picks, req);
       renderAiPicks(ok, { surname: s.surname, l1, l2, fate });
+      Nova.aiHistory.update(hid, { result: ok.map(({ c1, c2 }) => ({ name: s.surname + c1.char + c2.char, total: Nova.rating.rateName(l1, l2, c1, c2, fate).total })) });
       $('#ai-status').textContent = `${ok.length} 個建議` + (rejected.length ? `（${rejected.length} 個不合格已略過）` : '')
         + (usage && usage.totalTokenCount ? `・${usage.totalTokenCount} tokens` : '');
     } catch (e) {
       console.error(e);
+      if (hid) Nova.aiHistory.update(hid, { error: e.message });
       $('#ai-status').textContent = e.message;
     } finally {
+      renderHistory();
       aiSync();
+    }
+  }
+
+  // ---------------------------------------------------------------- 歷史紀錄（資料層在 js/ai_history.js）
+  function bornSummary() {
+    const d = $('#born-date').value;
+    if (!d) return '';
+    return $('#hour-unknown').checked || !$('#born-time').value ? d + '（時辰不詳）' : d + ' ' + $('#born-time').value;
+  }
+  function fmtTime(iso) {
+    const d = new Date(iso), p = (n) => String(n).padStart(2, '0');
+    return `${d.getMonth() + 1}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+  function histResult(h) {
+    if (h.error) return `<span class="bad">失敗：${esc(h.error)}</span>`;
+    if (!h.result) return '<span class="dim">進行中…</span>';
+    if (!h.result.length) return '<span class="dim">沒有合格建議</span>';
+    return h.result.map((r) => `${esc(r.name)} ${esc(r.total)}`).join('、');
+  }
+  function renderHistory() {
+    const items = Nova.aiHistory.list();
+    $('#ai-history-count').textContent = items.length ? `（${items.length}）` : '';
+    const box = $('#ai-history-list');
+    if (!items.length) {
+      box.innerHTML = '<p class="hint small">按「AI 推薦用字」後，這裡會記下每次的條件、偏好、模型與結果；可把偏好帶回欄位，修改後重新詢問。</p>';
+      return;
+    }
+    box.innerHTML = items.map((h) => `
+      <div class="hist-item" data-id="${esc(h.id)}">
+        <div class="hist-meta">${esc(fmtTime(h.t))}・${esc(h.surname)}・${h.gender === 'girl' ? '女' : '男'}${h.born ? '・' + esc(h.born) : ''}${h.model ? '・' + esc(h.model) : ''}</div>
+        <div class="hist-prefs">${h.prefs ? esc(h.prefs) : '<span class="dim">（無偏好說明）</span>'}</div>
+        <div class="hist-result">${histResult(h)}</div>
+        <div class="hist-actions"><button type="button" data-act="load">帶回偏好</button><button type="button" data-act="del">刪除</button></div>
+      </div>`).join('') + '<div class="hist-actions"><button type="button" data-act="clear">清除全部</button></div>';
+  }
+  function onHistoryClick(ev) {
+    const b = ev.target.closest('button[data-act]');
+    if (!b) return;
+    const act = b.dataset.act;
+    if (act === 'clear') {
+      if (confirm('清除全部歷史紀錄？')) { Nova.aiHistory.clear(); renderHistory(); }
+      return;
+    }
+    const id = b.closest('.hist-item').dataset.id;
+    if (act === 'del') { Nova.aiHistory.remove(id); renderHistory(); return; }
+    if (act === 'load') {
+      const h = Nova.aiHistory.list().find((x) => x.id === id);
+      if (!h) return;
+      $('#ai-prefs').value = h.prefs;
+      $('#ai-prefs').focus();
+      $('#ai-status').textContent = '已帶回偏好，修改後按「AI 推薦用字」重新詢問';
     }
   }
 
