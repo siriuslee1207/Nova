@@ -16,17 +16,41 @@
 ### 在手機上使用
 
 iPhone／iPad 在「檔案」App 裡直接點開 `nova.html` **不會動**：iOS 用「快速查看」預覽 HTML，版面畫得出來、但完全不執行 JavaScript，
-所以按「產生名字」沒有任何反應。這種情況頁面最上方會出現紅色提示說明原因（提示由 CSS 控制，JavaScript 一跑起來就消失）。三條可用的路：
+所以按「產生名字」沒有任何反應。這種情況頁面最上方會出現紅色提示說明原因（提示由 CSS 控制，JavaScript 一跑起來就消失）。四條可用的路：
 
 1. **從電腦分享給手機（最穩）**：電腦上跑 `.venv\Scripts\python tools\serve.py`，它會印出像 `http://192.168.1.23:8000/nova.html` 的網址；
    手機連同一個 Wi-Fi、用瀏覽器開即可，Safari 分享選單的「加入主畫面」可以把它變成像 App 的圖示。
    第一次執行 Windows 防火牆會詢問，要允許「私人網路」。頁面仍是純靜態、運算全在手機上，只有 AI 顧問會從手機直接連 Google。
 2. **iPhone 本機開**：「檔案」App 長按 `nova.html` → 分享 → 選 Safari（「拷貝到 Safari」），在 Safari 裡 JavaScript 才會執行；iOS 版本不同可能沒有這個選項。
 3. **Android**：用 Chrome 開，網址列輸入 `file:///sdcard/Download/nova.html`。
+4. **線上版**：把同一份檔案放到 GitHub Pages（見下），手機在任何網路下開網址即可，不必跟電腦同一個 Wi-Fi。
 
 手機版面是單欄；輸入框字級固定 16px（更小的話 iOS 聚焦時會自動放大整頁），字表與筆畫組合的點擊目標加大。
 手機沒有滑鼠可停留看 `title`，所以「筆畫組合選字」改成：點到的字會把拼音、五行與字義寫在字表下方。
 另外未攔截的錯誤會直接印在頁面最上方（手機沒有主控台可看）。
+
+### 線上版（GitHub Pages）
+
+`docs/` 就是 GitHub Pages 的站台根目錄：`docs/index.html` 是 `dist/nova.html` 的複本（本機建好、驗證過的那一份），
+`docs/nova.html` 只是把舊網址 `nova.html?…` 原樣轉到首頁，`docs/.nojekyll` 要求 GitHub 原封不動送檔、不要跑 Jekyll。
+發佈就是三步：
+
+```
+.venv\Scripts\python tools\build.py       # src/ 或 data/ 改過才需要
+.venv\Scripts\python tools\publish.py     # dist/nova.html → docs/index.html（會擋住忘了重 build 的情況）
+git add docs/index.html && git commit -m "publish 線上版" && git push
+```
+
+GitHub 上只要設定一次：Settings → Pages → Source 選 **Deploy from a branch**、Branch `main`、資料夾 `/docs`。
+網址是 `https://<帳號>.github.io/<repo>/`，一樣吃網址參數（`…/?surname=陳&born=2026-09-03T10:30&gender=girl`）。
+刻意不在 GitHub Actions 重新建置：ETL 來源之一 Unihan.zip 是 Unicode 的 "latest"，會隨版本移動，CI 重跑不保證產出與本機一致。
+
+幾件要知道的事：
+
+- GitHub Free 方案只有 **public repo** 能開 Pages，也就是原始碼與內建字典都會公開。Gemini API key 不受影響——它只存在使用者自己的瀏覽器、直接送到 Google。
+- 網頁的 origin 從 `file://` 變成 `https://<帳號>.github.io`，所以 `file://` 版存的 key、偏好與歷史紀錄**不會**帶過去（相對地也不再與其他本機 HTML 共用 localStorage，比較安全）。
+- iOS 用 https 開就會正常執行 JavaScript，Safari 的「加入主畫面」可以做成 App 圖示；`file://` 那個「快速查看不執行 JS」的限制不存在。
+- Pages 會快取，剛 push 完手機可能還是舊的，等一兩分鐘或強制重新整理。單檔 1.3 MB，首次載入會傳這麼多（Pages 有 gzip）。
 
 ### 評分權重
 
@@ -107,6 +131,7 @@ python -m venv .venv
 .venv\Scripts\python tools\build.py --fixtures         # tables → chars → prompts → golden → dist/nova.html
 .venv\Scripts\python -m pytest                         # Python 參考實作
 node tests\parity.mjs                                  # 或雙擊 tests\parity.html：JS 與 Python 逐位一致
+.venv\Scripts\python tools\publish.py                  # 驗證過再發佈：dist/nova.html → docs/index.html（GitHub Pages）
 ```
 
 `tools/transcribe_fate.py` 從 `ref/fate/` 的 Go 原始碼重新產生常數表（需先 `curl` 下載，見 `docs/spike-notes.md`）。
@@ -120,9 +145,9 @@ node tests\parity.mjs                                  # 或雙擊 tests\parity.
 | `data/gen/` | 建置產物：`chars.json`/`chars.gen.js`、`tables.gen.js`、`prompts.gen.js`、`etl_report.md` |
 | `nova_core/` | Python 參考實作、CLI、`llm/`（gemini、copilot、advisor） |
 | `src/` | 前端：`js/core/*`（與 Python 對應的模組）、`js/llm/*`、`ui.js`、`vendor/lunar.js` |
-| `tools/` | ETL、轉錄、fixture、打包、`serve.py`（分享給手機） |
+| `tools/` | ETL、轉錄、fixture、打包、`serve.py`（分享給手機）、`publish.py`（發佈到 GitHub Pages） |
 | `tests/` | pytest；`parity_core.js` + `parity.mjs`/`parity.html` |
-| `docs/spike-notes.md` | 資料品質、環境驗證與決策紀錄 |
+| `docs/` | GitHub Pages 站台：`index.html`（＝建好的 `nova.html`）、`nova.html`（舊網址轉址）、`.nojekyll`；另有 `spike-notes.md`：資料品質、環境驗證與決策紀錄 |
 
 ## 與 fate 的差異
 
