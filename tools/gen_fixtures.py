@@ -32,6 +32,11 @@ BIRTHS = [
 ]
 
 
+# 評分權重（未正規化）：None＝預設；刻意放入總和不為 1、除不盡、只留單一維度的組合
+WEIGHT_CASES = [None, None, None, (0, 0, 0, 1, 0), (1, 1, 1, 1, 1), (1, 2, 3, 4, 5), (0.1, 0.5, 0.2, 0.1, 0.1),
+                (3, 0, 0, 7, 0), (0.33, 0.33, 0.34, 0, 0), (0, 0, 0, 0, 1), (2.5, 0, 1.25, 0, 0.75)]
+
+
 def fate_input(b, method):
     y, m, d, h, mi = b
     return {'year': y, 'month': m, 'day': d, 'hour': h, 'minute': mi, 'method': method}
@@ -65,16 +70,19 @@ def main() -> None:
 
     ratings = []
     fate_objs = [None] + [bazi.compute(*b, method=m) for b in BIRTHS[:6] for m in bazi.METHODS]
-    for _ in range(500):
+    for i in range(500):
         s = rnd.choice(SURNAMES)
         l1, l2 = surname_strokes(s)
         c1, c2 = rnd.choice(pool), rnd.choice(pool)
         fi = rnd.randrange(len(fate_objs))
-        r = rating.rate_name(l1, l2, c1, c2, fate_objs[fi])
+        w = WEIGHT_CASES[i % len(WEIGHT_CASES)]   # 含總和不為 1、除不盡的權重，確保正規化兩邊逐位相同
+        r = rating.rate_name(l1, l2, c1, c2, fate_objs[fi], w)
         ratings.append({
-            'input': {'l1': l1, 'l2': l2, 'c1': c1.char, 'c2': c2.char, 'fate': fates_index(fate_objs[fi], fates) if fi else None},
+            'input': {'l1': l1, 'l2': l2, 'c1': c1.char, 'c2': c2.char, 'weights': list(w) if w else None,
+                      'fate': fates_index(fate_objs[fi], fates) if fi else None},
             'expect': {'wenhua': r.wenhua, 'wuxing': r.wuxing, 'shengxiao': r.shengxiao, 'wuge': r.wuge, 'yinyun': r.yinyun,
-                       'total': r.total, 'grade': r.grade, 'ge': r.ge.as_dict() if r.ge else None, 'sancai_key': r.sancai_key},
+                       'total': r.total, 'grade': r.grade, 'ge': r.ge.as_dict() if r.ge else None, 'sancai_key': r.sancai_key,
+                       'weights': list(r.weights)},
         })
 
     combos = []
@@ -97,6 +105,11 @@ def main() -> None:
         ('王', BIRTHS[8], 'geju', dict(avoid_chars=frozenset('宇冠'), require_chars=frozenset('安平和'), per_first_char=2)),
         ('謝', BIRTHS[15], 'balance', dict(max_level=3, per_first_char=3, top_n=8)),
         ('余', None, None, dict(fixed_second='安')),
+        # 自訂權重：只看三才五格／五維等重／除不盡／完全不看五格
+        ('李', BIRTHS[0], 'balance', dict(per_first_char=2, weights=(0, 0, 0, 1, 0))),
+        ('李', BIRTHS[0], 'balance', dict(per_first_char=2, weights=(1, 1, 1, 1, 1))),
+        ('陳', BIRTHS[5], 'geju', dict(per_first_char=2, top_n=15, weights=(1, 2, 3, 4, 5))),
+        ('歐陽', None, None, dict(per_first_char=1, weights=(0.4, 0, 0, 0, 0.6))),
     ]
     for s, b, method, kw in configs:
         l1, l2 = surname_strokes(s)
@@ -108,7 +121,8 @@ def main() -> None:
                       'options': {'strictness': opt.strictness, 'exclude_female_caution': opt.exclude_female_caution,
                                   'max_level': opt.max_level, 'avoid_chars': sorted(opt.avoid_chars),
                                   'require_chars': sorted(opt.require_chars), 'fixed_first': opt.fixed_first,
-                                  'fixed_second': opt.fixed_second, 'top_n': opt.top_n, 'per_first_char': opt.per_first_char}},
+                                  'fixed_second': opt.fixed_second, 'top_n': opt.top_n, 'per_first_char': opt.per_first_char,
+                                  'weights': list(opt.weights) if opt.weights else None}},
             'expect': [{'name': c.name, 'total': c.total, 'grade': c.grade, 'scores': list(c.scores),
                         'f1': c.combo.f1, 'f2': c.combo.f2} for c in res],
         })
@@ -118,30 +132,49 @@ def main() -> None:
     prompts = []
     for s, b, method, gender, name, kw in [('陳', BIRTHS[0], 'balance', 'girl', '冠宇', dict(exclude_female_caution=True)),
                                             ('歐陽', None, None, 'boy', '丞亮', dict(strictness='strict')),
-                                            ('林', BIRTHS[15], 'geju', 'boy', '愉修', dict(max_level=1))]:
+                                            ('林', BIRTHS[15], 'geju', 'boy', '愉修', dict(max_level=1)),
+                                            ('李', BIRTHS[0], 'balance', 'boy', '冠宇', dict(weights=(0, 0, 0, 1, 0))),
+                                            ('王', BIRTHS[5], 'balance', 'girl', '安平', dict(weights=(1, 2, 3, 4, 5)))]:
         l1, l2 = surname_strokes(s)
         f = bazi.compute(*b, method=method) if b else None
         opt = Options(**kw)
-        req = build_recommend(s, l1, l2, gender, f, lucky_combos(l1, l2, opt), chars.by_stroke(opt.max_level), n=8, preferences='喜歡自然意象')
+        req = build_recommend(s, l1, l2, gender, f, lucky_combos(l1, l2, opt), chars.by_stroke(opt.max_level), n=8,
+                              preferences='喜歡自然意象', weights=opt.weights)
         c1, c2 = chars.lookup(name[0]), chars.lookup(name[1])
-        system, user = build_explain(s, c1, c2, rating.rate_name(l1, l2, c1, c2, f), f)
+        system, user = build_explain(s, c1, c2, rating.rate_name(l1, l2, c1, c2, f, opt.weights), f)
         prompts.append({'input': {'surname': s, 'l1': l1, 'l2': l2, 'gender': gender, 'fate': fate_input(b, method) if b else None,
                                   'options': {'strictness': opt.strictness, 'exclude_female_caution': opt.exclude_female_caution,
-                                              'max_level': opt.max_level}, 'name': name, 'preferences': '喜歡自然意象'},
+                                              'max_level': opt.max_level, 'weights': list(opt.weights) if opt.weights else None},
+                                  'name': name, 'preferences': '喜歡自然意象'},
                         'expect': {'system': req.system, 'recommend_user': req.user, 'explain_user': user,
                                    'allowed_strokes': sorted(req.allowed)}})
+
+    # 權重字串解析：CLI 與網址參數共用，JS 必須逐項相同（'ERROR' 表示兩邊都要拒絕）
+    weight_specs = ['', '  ', 'default', 'wuge', 'bazi', 'sound', 'equal', '0,0,0,1,0', '1,2,3,4,5',
+                    '三才五格=1,其他=0', '五格三才=1、其他=0', '五格:1;其他:0', 'wuge=2', 'wuge=2,other=0',
+                    '音韻=1,文化=1,其他=0', '文化=0.5 五行=0.5', 'yinyun=3', '1,2,3', '文化=一', '長相=1',
+                    'wuge=', 'constructor', 'constructor=1', 'toString=1', 'wuge=-1,其他=0']
+    weight_parse = []
+    for spec in weight_specs:
+        try:
+            got = rating.parse_weights(spec)
+            expect = list(got) if got is not None else None
+        except ValueError:
+            expect = 'ERROR'
+        weight_parse.append({'input': spec, 'expect': expect})
 
     golden = {
         'meta': {'generated': date.today().isoformat(), 'seed': SEED, 'chars_version': chars._payload()['version'],
                  'chars_generated': chars._payload()['generated']},
         'bazi': fates, 'rating': ratings, 'combos': combos, 'generate': gens, 'prompts': prompts,
+        'weight_parse': weight_parse,
     }
     OUT.mkdir(parents=True, exist_ok=True)
     text = json.dumps(golden, ensure_ascii=False, separators=(',', ':'))
     (OUT / 'golden.json').write_text(text, encoding='utf-8')
     (OUT / 'golden.gen.js').write_text('globalThis.NOVA_GOLDEN = ' + text + ';\n', encoding='utf-8')
-    print(f'golden: bazi {len(fates)}, rating {len(ratings)}, combos {len(combos)}, generate {len(gens)} '
-          f'({len(text.encode("utf-8")) // 1024} KB)')
+    print(f'golden: bazi {len(fates)}, rating {len(ratings)}, combos {len(combos)}, generate {len(gens)}, '
+          f'weights {len(weight_parse)} ({len(text.encode("utf-8")) // 1024} KB)')
 
 
 def fates_index(f: bazi.FateData, fates: list[dict]) -> dict:

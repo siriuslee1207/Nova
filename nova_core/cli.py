@@ -1,6 +1,7 @@
 """命令列：python -m nova_core.cli 陳 --born 2026-09-03T10:30 --gender girl [--top 10] [--json]
 
 亦可對單一名字出報告：python -m nova_core.cli 陳 --explain 冠宇 --born 2026-09-03T10:30
+自訂評分權重：python -m nova_core.cli 陳 --weights '三才五格=1,其他=0'
 """
 from __future__ import annotations
 
@@ -14,7 +15,7 @@ from . import bazi as bazi_mod
 from . import chars, sancai
 from .dayan import find as find_dayan
 from .generator import Options, generate
-from .rating import GE_NAMES, rate_name
+from .rating import DIM_NAMES, DIMS, GE_NAMES, PRESETS, PRESET_NAMES, is_default_weights, normalize_weights, parse_weights, rate_name, weights_text
 from .wuge import element_of, yinyang_of
 
 
@@ -62,6 +63,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument('--surname-strokes', help='手動指定姓氏筆畫，如 16 或 15,17')
     p.add_argument('--female-caution', dest='female_caution', action=argparse.BooleanOptionalAction, default=None,
                    help='排除女性不宜之總格（預設：女生開、男生關）')
+    p.add_argument('--weights', default='', metavar='SPEC',
+                   help='自訂評分權重（會正規化成總和 1）：預設名稱 '
+                        + '／'.join(f'{k}（{v}）' for k, v in PRESET_NAMES.items())
+                        + '，或「三才五格=1,其他=0」「wuge=2」（未列到的維持預設），或五個數字「0,0,0,1,0」'
+                          '（順序：文化,五行,生肖,五格,音韻）')
     p.add_argument('--explain', metavar='NAME', help='只對此名字（2 字）輸出完整評分報告')
     p.add_argument('--json', action='store_true', help='以 JSON 輸出')
     g = p.add_argument_group('AI 顧問')
@@ -82,16 +88,17 @@ def fate_from_args(args) -> bazi_mod.FateData | None:
     return bazi_mod.compute(y, m, d, h, mi, method=args.method)
 
 
-def explain(surname: str, l1: int, l2: int, name: str, fate, as_json: bool) -> None:
+def explain(surname: str, l1: int, l2: int, name: str, fate, as_json: bool, weights=None) -> None:
     if len(name) != 2:
         raise SystemExit('--explain 需為 2 字名')
     c1, c2 = chars.lookup(name[0]), chars.lookup(name[1])
     if not c1 or not c2:
         raise SystemExit(f'字典中查無「{name}」的用字')
-    r = rate_name(l1, l2, c1, c2, fate)
+    r = rate_name(l1, l2, c1, c2, fate, weights)
     ge = r.ge
     report = {
         'name': surname + name, 'total': r.total, 'grade': r.grade,
+        'weights': {DIM_NAMES[k]: v for k, v in zip(DIMS, r.weights)},
         'scores': {'文化': r.wenhua, '五行': r.wuxing, '生肖': r.shengxiao, '五格': r.wuge, '音韻': r.yinyun},
         'chars': [asdict(c1), asdict(c2)],
         'wuge': {GE_NAMES[k]: {'數': n, '數理': find_dayan(n).lucky, '名': find_dayan(n).title,
@@ -108,6 +115,8 @@ def explain(surname: str, l1: int, l2: int, name: str, fate, as_json: bool) -> N
         print(json.dumps(report, ensure_ascii=False, indent=1))
         return
     print(f"{report['name']}  總分 {r.total}（{r.grade}）  文化{r.wenhua} 五行{r.wuxing} 生肖{r.shengxiao} 五格{r.wuge} 音韻{r.yinyun}")
+    if not is_default_weights(r.weights):
+        print(f"  評分權重 {weights_text(r.weights)}")
     for c in (c1, c2):
         print(f"  {c.char}  {'/'.join(c.py)}  {c.stroke}畫 {c.wx}  {c.meaning}")
     if ge:
@@ -129,10 +138,10 @@ def _provider(args):
     return get_provider(args.provider, args.model)
 
 
-def ai_explain(args, surname: str, l1: int, l2: int, name: str, fate) -> None:
+def ai_explain(args, surname: str, l1: int, l2: int, name: str, fate, weights=None) -> None:
     from .llm.advisor import build_explain
     c1, c2 = chars.lookup(name[0]), chars.lookup(name[1])
-    system, user = build_explain(surname, c1, c2, rate_name(l1, l2, c1, c2, fate), fate)
+    system, user = build_explain(surname, c1, c2, rate_name(l1, l2, c1, c2, fate, weights), fate)
     if args.ai_dump:
         print('--- system ---\n' + system + '\n--- user ---\n' + user)
         return
@@ -148,7 +157,7 @@ def ai_recommend(args, surname: str, l1: int, l2: int, fate, opt: Options) -> No
     if not combos:
         raise SystemExit('沒有合格的筆畫組合，請放寬嚴格度')
     req = build_recommend(surname, l1, l2, args.gender, fate, combos, chars.by_stroke(opt.max_level),
-                          n=args.ai_n, preferences=args.prefs)
+                          n=args.ai_n, preferences=args.prefs, weights=opt.weights)
     if args.ai_dump:
         print('--- system ---\n' + req.system + '\n--- user ---\n' + req.user)
         return
@@ -156,7 +165,7 @@ def ai_recommend(args, surname: str, l1: int, l2: int, fate, opt: Options) -> No
     ok, rejected = validate_picks(data.get('picks'), req)
     print(f'[AI 推薦・{args.provider}] {len(ok)} 個合格' + (f'，{len(rejected)} 個不合格已略過' if rejected else ''))
     for c1, c2, reason in ok:
-        r = rate_name(l1, l2, c1, c2, fate)
+        r = rate_name(l1, l2, c1, c2, fate, opt.weights)
         print(f'  {surname}{c1.char}{c2.char}  {r.total:>5}（{r.grade}）  {c1.py[0]} {c2.py[0]}  {c1.wx}{c2.wx}  — {reason}')
     for rj in rejected:
         print(f'  ✗ {rj["first"]}{rj["second"]}：{rj["why"]}')
@@ -172,17 +181,22 @@ def main(argv: list[str] | None = None) -> None:
         l1, l2, snotes = surname_strokes(surname)
         notes += snotes
     fate = fate_from_args(args)
+    try:
+        weights = parse_weights(args.weights)
+    except ValueError as e:
+        raise SystemExit(f'--weights {e}（預設名稱：' + '、'.join(PRESETS) + '）')
     if not args.json and notes:
         print('；'.join(notes))
     if args.explain:
-        explain(surname, l1, l2, args.explain, fate, args.json)
+        explain(surname, l1, l2, args.explain, fate, args.json, weights)
         if args.ai == 'explain':
-            ai_explain(args, surname, l1, l2, args.explain, fate)
+            ai_explain(args, surname, l1, l2, args.explain, fate, weights)
         return
     female = args.female_caution if args.female_caution is not None else (args.gender == 'girl')
     opt = Options(strictness=args.strictness, exclude_female_caution=female, max_level=args.level,
                   avoid_chars=frozenset(args.avoid), require_chars=frozenset(args.require),
-                  fixed_first=args.first, fixed_second=args.second, top_n=args.top, per_first_char=args.per_first)
+                  fixed_first=args.first, fixed_second=args.second, top_n=args.top, per_first_char=args.per_first,
+                  weights=weights)
     if args.ai == 'recommend':
         ai_recommend(args, surname, l1, l2, fate, opt)
         return
@@ -193,12 +207,16 @@ def main(argv: list[str] | None = None) -> None:
                 'strokes': [l1, l2, c.combo.f1, c.combo.f2], 'wuge': c.combo.ge.as_dict(),
                 'sancai': c.combo.sancai_key, 'wuxing': c.c1.wx + c.c2.wx,
                 'pinyin': [c.c1.py[0], c.c2.py[0]]} for i, c in enumerate(results)]
-        print(json.dumps({'surname': surname, 'fate': asdict(fate) if fate else None, 'results': out},
-                         ensure_ascii=False, indent=1))
+        print(json.dumps({'surname': surname, 'fate': asdict(fate) if fate else None,
+                          'weights': {DIM_NAMES[k]: v for k, v in zip(DIMS, normalize_weights(weights))},
+                          'results': out}, ensure_ascii=False, indent=1))
         return
     if fate:
         print(f"八字 {' '.join(fate.sizhu)}  日主{fate.day_gan}{fate.day_wx}（{fate.qiangruo}） 生肖{fate.zodiac}"
               f"  用{fate.yong} 喜{fate.xi} 忌{fate.ji} 仇{fate.chou}  {fate.note}")
+    nw = normalize_weights(weights)
+    if not is_default_weights(nw):
+        print(f'評分權重 {weights_text(nw)}')
     print(f"{'#':>2} {'姓名':<6} {'總分':>5} 等級  文化 五行 生肖 五格  音韻  筆畫        五格(天人地外總)   三才   五行  拼音")
     for i, c in enumerate(results, 1):
         wh, wx, sx, wg, yy = c.scores

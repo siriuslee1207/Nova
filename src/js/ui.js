@@ -6,7 +6,7 @@
   const wxTag = (wx) => wx ? `<span class="wx wx-${wx}">${wx}</span>` : '';
   const DIMS = [['文化', 'wenhua'], ['五行', 'wuxing'], ['生肖', 'shengxiao'], ['五格', 'wuge'], ['音韻', 'yinyun']];
 
-  const state = { fate: null, results: [], l1: 0, l2: 0, surname: '', runId: 0 };
+  const state = { fate: null, results: [], l1: 0, l2: 0, surname: '', runId: 0, weights: null };
   // 卡片註冊表：data-id → {cand, fate, l1, l2, surname}，供事件委派使用
   const registry = new Map();
   let nextId = 1;
@@ -66,6 +66,57 @@
       <div class="fen"><span>用神 ${wxTag(f.yong)}</span><span>喜神 ${wxTag(f.xi)}</span><span>忌神 ${wxTag(f.ji)}</span><span>仇神 ${wxTag(f.chou)}</span>${f.note ? `<span class="dim">${esc(f.note)}</span>` : ''}</div>`;
   }
 
+  // ---------------------------------------------------------------- 評分權重
+  // 欄位裡放「未正規化」的五個數字（只看比例）；正規化成總和 1 這件事只在 generator／rateName 內做一次，
+  // 兩邊都從同一份原始權重出發，才不會因為重複正規化差一個位數。權重記在這個瀏覽器。
+  const WEIGHTS_KEY = 'nova.weights.v1';
+  const weightInputs = () => [...document.querySelectorAll('#weights input[data-w]')];
+  const sameWeights = (a, b) => a.every((v, i) => Math.abs(v - b[i]) < 1e-9);
+
+  function readWeights() {
+    return weightInputs().map((el) => { const v = Number(el.value); return Number.isFinite(v) && v > 0 ? v : 0; });
+  }
+
+  function renderWeightBox() {
+    const r = Nova.rating;
+    $('#weight-preset').innerHTML = Object.keys(r.PRESETS).map((k) =>
+      `<option value="${k}" title="${esc(r.weightsText(r.normalizeWeights(r.PRESETS[k])))}">${esc(r.PRESET_NAMES[k])}</option>`).join('')
+      + '<option value="custom">自訂…</option>';
+    $('#weights').innerHTML = r.DIMS.map((k) =>
+      `<label class="wcell">${esc(r.DIM_NAMES[k])}<input type="number" data-w="${k}" min="0" max="100" step="0.05"><small></small></label>`).join('');
+  }
+
+  function applyWeights(vals) {
+    weightInputs().forEach((el, i) => { el.value = String(vals[i]); });
+    syncWeights();
+  }
+
+  function syncWeights() {
+    const r = Nova.rating, raw = readWeights(), n = r.normalizeWeights(raw);
+    weightInputs().forEach((el, i) => {
+      el.parentNode.querySelector('small').textContent = r.round1(n[i] * 100) + '%';
+      el.parentNode.classList.toggle('off', !(raw[i] > 0));
+    });
+    const hit = Object.keys(r.PRESETS).find((k) => sameWeights(n, r.normalizeWeights(r.PRESETS[k])));
+    $('#weight-preset').value = hit || 'custom';
+    $('#weights-summary').textContent = hit ? r.PRESET_NAMES[hit] : r.weightsText(n);
+    try { localStorage.setItem(WEIGHTS_KEY, JSON.stringify(raw)); } catch (_) { /* ignore */ }
+    return n;
+  }
+
+  function initWeights() {
+    renderWeightBox();
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(WEIGHTS_KEY)); } catch (_) { /* ignore */ }
+    applyWeights(Array.isArray(saved) && saved.length === 5 ? saved : Nova.rating.DEFAULT_WEIGHTS);
+    $('#weights').addEventListener('input', syncWeights);
+    $('#weight-preset').addEventListener('change', () => {
+      const v = $('#weight-preset').value;
+      if (Object.prototype.hasOwnProperty.call(Nova.rating.PRESETS, v)) applyWeights(Nova.rating.PRESETS[v]);
+    });
+    $('#weight-reset').addEventListener('click', () => applyWeights(Nova.rating.DEFAULT_WEIGHTS));
+  }
+
   // ---------------------------------------------------------------- 產生
   function readOptions() {
     return {
@@ -78,6 +129,7 @@
       fixedSecond: $('#fixed-second').value.trim() || null,
       topN: Math.max(1, Math.min(200, Number($('#topn').value) || 20)),
       perFirstChar: Math.max(0, Number($('#perfirst').value) || 0),
+      weights: readWeights(),
       gender: $('#gender').value,
     };
   }
@@ -105,9 +157,11 @@
         const pbar = $('#pbar');
         const res = await Nova.generator.generateAsync(l1, l2, fate, opt, (i, n) => { if (pbar) pbar.style.width = (100 * i / n) + '%'; });
         if (runId !== state.runId) return; // 使用者已重新送出
-        Object.assign(state, { fate, results: res, l1, l2, surname: s.surname });
-        renderResults(res, s.surname, l1, l2, fate);
-        setBusy(false, `${res.length} 個結果，${Math.round(performance.now() - t0)} ms`);
+        Object.assign(state, { fate, results: res, l1, l2, surname: s.surname, weights: opt.weights });
+        renderResults(res, { surname: s.surname, l1, l2, fate, weights: opt.weights });
+        const nw = Nova.rating.normalizeWeights(opt.weights);
+        setBusy(false, `${res.length} 個結果，${Math.round(performance.now() - t0)} ms`
+          + (Nova.rating.isDefaultWeights(nw) ? '' : `・權重 ${Nova.rating.weightsText(nw)}`));
         try { history.replaceState(null, '', buildQuery(s.surname)); } catch (_) { /* file:// 在部分瀏覽器不允許 */ }
       } catch (e) {
         console.error(e);
@@ -117,11 +171,11 @@
     })();
   }
 
-  function renderResults(res, surname, l1, l2, fate) {
+  function renderResults(res, ctx) {
     const box = $('#results');
     registry.clear();
     if (!res.length) { box.innerHTML = '<p class="hint">沒有符合條件的組合，請放寬嚴格度或字集。</p>'; return; }
-    box.innerHTML = res.map((c, i) => card(c, i, { surname, l1, l2, fate })).join('');
+    box.innerHTML = res.map((c, i) => card(c, i, ctx)).join('');
   }
 
   function register(cand, ctx) {
@@ -133,11 +187,12 @@
   function card(c, i, ctx, reason) {
     const g = c.combo.ge;
     const id = register(c, ctx);
+    const nw = Nova.rating.normalizeWeights(ctx.weights || null);   // 只影響顯示，分數已由引擎算好
     return `<article class="card" tabindex="0" data-id="${id}">
       <div class="head"><span class="rank">${i + 1}</span><span class="name">${esc(ctx.surname + c.c1.char + c.c2.char)}</span>
         <span class="py">${esc(c.c1.py[0])} ${esc(c.c2.py[0])}</span>
         <span class="total">${c.total.toFixed(1)} <span class="badge g-${esc(c.grade)}">${esc(c.grade)}</span></span></div>
-      <div class="bars">${DIMS.map(([n], k) => `<span class="bar">${n} ${Math.round(c.scores[k])}<i><b style="width:${c.scores[k]}%"></b></i></span>`).join('')}</div>
+      <div class="bars">${DIMS.map(([n], k) => `<span class="bar${nw[k] > 0 ? '' : ' off'}" title="權重 ${Nova.rating.round1(nw[k] * 100)}%">${n} ${Math.round(c.scores[k])}<i><b style="width:${c.scores[k]}%"></b></i></span>`).join('')}</div>
       <div class="meta"><span>筆畫 ${ctx.l1}${ctx.l2 ? '+' + ctx.l2 : ''}+${c.combo.f1}+${c.combo.f2}</span><span>五格 ${g.tian}/${g.ren}/${g.di}/${g.wai}/${g.zong}</span>
         <span>三才 ${esc(c.combo.sancaiKey)}</span><span>${wxTag(c.c1.wx)}${wxTag(c.c2.wx)}</span></div>
       ${reason ? `<div class="reason">AI：${esc(reason)}</div>` : ''}
@@ -146,6 +201,7 @@
 
   function detailHtml(r, c1, c2) {
     const S = Nova.sancai, W = Nova.wuge, D = Nova.dayan, g = r.ge;
+    const w = r.weights || Nova.rating.DEFAULT_WEIGHTS;
     const geList = g ? [['天格', g.tian], ['人格', g.ren], ['地格', g.di], ['外格', g.wai], ['總格', g.zong]] : [];
     const geItems = geList.map(([n, v]) => {
       const dy = D.find(v);
@@ -160,8 +216,8 @@
       <h4>三才 ${esc(r.sancaiKey)}・${esc(S.verdict(r.sancaiKey))}</h4>
       <p>${esc(S.detail(r.sancaiKey))}</p>
       <p><b>基礎運</b> ${esc(S.jichu(ren, W.elementOf(g.di)))}<br><b>成功運</b> ${esc(S.chenggong(ren, W.elementOf(g.tian)))}<br><b>人際</b> ${esc(S.renji(ren, W.elementOf(g.wai)))}</p>` : ''}
-      <h4>評分明細</h4>
-      ${DIMS.map(([n, k]) => `<p><b>${n} ${r[k]}</b> <span class="dim">${esc((r.details[k] || []).join('；') || '—')}</span></p>`).join('')}
+      <h4>評分明細 <span class="dim">總分 ${r.total.toFixed(1)}（${esc(r.grade)}）＝各維加權平均</span></h4>
+      ${DIMS.map(([n, k], i) => `<p><b${w[i] > 0 ? '' : ' class="off"'}>${n} ${r[k]}</b> <span class="wpct">×${Nova.rating.round1(w[i] * 100)}%</span> <span class="dim">${esc((r.details[k] || []).join('；') || '—')}</span></p>`).join('')}
       <p><button type="button" class="ai-explain" ${aiOk ? '' : 'disabled title="請先在左側 AI 顧問填入 API key"'}>AI 解說</button></p>
       <div class="ai-text"></div>
     </div>`;
@@ -176,7 +232,7 @@
     if (ev.target.closest('.detail')) return;
     const d = el.querySelector('.detail');
     if (d) { d.remove(); return; }
-    const r = Nova.rating.rateName(entry.l1, entry.l2, entry.cand.c1, entry.cand.c2, entry.fate);
+    const r = Nova.rating.rateName(entry.l1, entry.l2, entry.cand.c1, entry.cand.c2, entry.fate, entry.weights || null);
     el.insertAdjacentHTML('beforeend', detailHtml(r, entry.cand.c1, entry.cand.c2));
   }
 
@@ -198,9 +254,10 @@
     try { [l1, l2] = surnameStrokes(s.info); } catch (e) { setBusy(false, e.message); return; }
     const fate = readFate();
     renderBazi(fate);
-    const r = Nova.rating.rateName(l1, l2, c1, c2, fate);
+    const weights = readWeights();
+    const r = Nova.rating.rateName(l1, l2, c1, c2, fate, weights);
     registry.clear();
-    $('#results').innerHTML = card(candFromRating(c1, c2, r), 0, { surname: s.surname, l1, l2, fate });
+    $('#results').innerHTML = card(candFromRating(c1, c2, r), 0, { surname: s.surname, l1, l2, fate, weights });
     $('#results .card').insertAdjacentHTML('beforeend', detailHtml(r, c1, c2));
     setBusy(false, '');
   }
@@ -308,14 +365,17 @@
       const buckets = Nova.chars.byStroke(opt.maxLevel);
       const prefs = $('#ai-prefs').value.trim();
       savePrefs();
-      hid = Nova.aiHistory.add({ surname: s.surname, gender: opt.gender, born: bornSummary(), model: Nova.llm.settings().model, prefs });
+      const nw = Nova.rating.normalizeWeights(opt.weights);
+      hid = Nova.aiHistory.add({ surname: s.surname, gender: opt.gender, born: bornSummary(), model: Nova.llm.settings().model,
+        weights: Nova.rating.weightsText(nw), prefs });
       renderHistory();
-      const req = Nova.advisor.buildRecommend({ surname: s.surname, l1, l2, gender: opt.gender, fate, combos, buckets, n: 8, preferences: prefs });
+      const req = Nova.advisor.buildRecommend({ surname: s.surname, l1, l2, gender: opt.gender, fate, combos, buckets, n: 8,
+        preferences: prefs, weights: opt.weights });
       const { data, usage } = await Nova.llm.generateJson({ system: req.system, user: req.user, schema: Nova.advisor.PICKS_SCHEMA,
         onStatus: (m) => { $('#ai-status').textContent = m; } });
       const { ok, rejected } = Nova.advisor.validatePicks(data.picks, req);
-      renderAiPicks(ok, { surname: s.surname, l1, l2, fate });
-      Nova.aiHistory.update(hid, { result: ok.map(({ c1, c2 }) => ({ name: s.surname + c1.char + c2.char, total: Nova.rating.rateName(l1, l2, c1, c2, fate).total })) });
+      renderAiPicks(ok, { surname: s.surname, l1, l2, fate, weights: opt.weights });
+      Nova.aiHistory.update(hid, { result: ok.map(({ c1, c2 }) => ({ name: s.surname + c1.char + c2.char, total: Nova.rating.rateName(l1, l2, c1, c2, fate, opt.weights).total })) });
       $('#ai-status').textContent = `${ok.length} 個建議` + (rejected.length ? `（${rejected.length} 個不合格已略過）` : '')
         + (usage && usage.totalTokenCount ? `・${usage.totalTokenCount} tokens` : '');
     } catch (e) {
@@ -373,7 +433,7 @@
     }
     box.innerHTML = items.map((h) => `
       <div class="hist-item" data-id="${esc(h.id)}">
-        <div class="hist-meta">${esc(fmtTime(h.t))}・${esc(h.surname)}・${h.gender === 'girl' ? '女' : '男'}${h.born ? '・' + esc(h.born) : ''}${h.model ? '・' + esc(h.model) : ''}</div>
+        <div class="hist-meta">${esc(fmtTime(h.t))}・${esc(h.surname)}・${h.gender === 'girl' ? '女' : '男'}${h.born ? '・' + esc(h.born) : ''}${h.model ? '・' + esc(h.model) : ''}${h.weights ? '・權重 ' + esc(h.weights) : ''}</div>
         <div class="hist-prefs">${h.prefs ? esc(h.prefs) : '<span class="dim">（無偏好說明）</span>'}</div>
         <div class="hist-result">${histResult(h)}</div>
         <div class="hist-actions"><button type="button" data-act="load">帶回偏好</button><button type="button" data-act="del">刪除</button></div>
@@ -402,7 +462,7 @@
   function renderAiPicks(ok, ctx) {
     const old = $('#ai-picks');
     if (old) old.remove();
-    const cards = ok.map(({ c1, c2, reason }, i) => card(candFromRating(c1, c2, Nova.rating.rateName(ctx.l1, ctx.l2, c1, c2, ctx.fate)), i, ctx, reason));
+    const cards = ok.map(({ c1, c2, reason }, i) => card(candFromRating(c1, c2, Nova.rating.rateName(ctx.l1, ctx.l2, c1, c2, ctx.fate, ctx.weights || null)), i, ctx, reason));
     const html = `<section id="ai-picks"><h3>AI 推薦（分數由 Nova 計算，點卡片看明細）</h3>${cards.length ? cards.join('') : '<p class="hint">AI 沒有給出合格的建議，請再試一次或調整偏好。</p>'}</section>`;
     const box = $('#results');
     if (box.querySelector('.hint') && !box.querySelector('.card')) box.innerHTML = '';
@@ -414,7 +474,7 @@
     btn.disabled = true;
     out.textContent = '生成中…';
     try {
-      const r = Nova.rating.rateName(entry.l1, entry.l2, entry.cand.c1, entry.cand.c2, entry.fate);
+      const r = Nova.rating.rateName(entry.l1, entry.l2, entry.cand.c1, entry.cand.c2, entry.fate, entry.weights || null);
       const req = Nova.advisor.buildExplain({ surname: entry.surname, c1: entry.cand.c1, c2: entry.cand.c2, rating: r, fate: entry.fate });
       await Nova.llm.streamText({ system: req.system, user: req.user, onDelta: (_, full) => { out.textContent = full; },
         onStatus: (m) => { out.textContent = m; } });
@@ -431,6 +491,8 @@
     p.set('surname', surname);
     if ($('#born-date').value) p.set('born', $('#born-date').value + ($('#hour-unknown').checked || !$('#born-time').value ? '' : 'T' + $('#born-time').value));
     p.set('gender', $('#gender').value);
+    const raw = readWeights();
+    if (!Nova.rating.isDefaultWeights(Nova.rating.normalizeWeights(raw))) p.set('weights', raw.join(','));
     return '?' + p.toString();
   }
   function applyQuery() {
@@ -447,6 +509,11 @@
     for (const k of ['level', 'strictness', 'method', 'topn', 'perfirst', 'avoid', 'require']) if (p.get(k) != null) $('#' + k).value = p.get(k);
     if (p.get('first')) $('#fixed-first').value = p.get('first');
     if (p.get('second')) $('#fixed-second').value = p.get('second');
+    if (p.get('weights')) {
+      // 五個數字、「wuge」這類預設名稱、或「三才五格=1,其他=0」都收
+      try { applyWeights(Nova.rating.parseWeights(p.get('weights')) || Nova.rating.DEFAULT_WEIGHTS); $('#weights-box').open = true; }
+      catch (e) { setBusy(false, '權重參數看不懂：' + e.message); }
+    }
     if (p.get('explain')) { $('#explain-name').value = p.get('explain'); return 'explain'; }
     return p.get('auto') !== '0' ? 'generate' : false;
   }
@@ -462,6 +529,7 @@
     $('#female-caution').checked = $('#gender').value === 'girl';
     const d = Nova.chars.data();
     $('#version').textContent = `字典 ${d.map.size} 字（${d.generated}）・lunar-javascript・Nova 0.1`;
+    initWeights();
     aiInit();
     const mode = applyQuery();
     if (mode === 'explain') { readSurname(); onExplain(new Event('submit')); }

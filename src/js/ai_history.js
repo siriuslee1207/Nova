@@ -15,7 +15,8 @@
   }
   function list() { return items.slice(); }
   function sameAsk(a, b) {
-    return a.surname === b.surname && a.gender === b.gender && a.born === b.born && a.prefs === b.prefs;
+    return a.surname === b.surname && a.gender === b.gender && a.born === b.born && a.prefs === b.prefs
+      && (a.weights || '') === (b.weights || '');
   }
   function add(entry) {
     const t = new Date().toISOString();

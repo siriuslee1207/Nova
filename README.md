@@ -13,6 +13,15 @@
 點結果卡片展開五格、三才、評分明細；「單一名字評分」可直接評自己想的名字。
 可用網址參數預填並自動執行，例如 `nova.html?surname=陳&born=2026-09-03T10:30&gender=girl` 或 `…&explain=冠宇`。
 
+### 評分權重
+
+總分預設是五維加權：文化 20%、五行 25%、生肖 10%、五格三才 30%、音韻 15%（三才併在五格維度內）。
+表單的「評分權重」可自己調：選預設組合（預設五維／只看三才五格／八字五行為主／音韻字義為主／五維等重），
+或直接填五個數字。數字只看比例，Nova 會正規化成總和 1 再算分——填「三才五格 1、其他 0」，總分就等於三才五格的分數，
+等級（上上／上吉…）與各維分數的算法都不變。權重只影響總分與排名，篩掉哪些筆畫組合仍由「嚴格度」決定；
+AI 推薦時也會把這次的權重寫進提示。權重會記在這個瀏覽器，也可用網址參數帶入，例如
+`nova.html?surname=李&weights=0,0,0,1,0` 或 `…&weights=三才五格%3D1,其他%3D0`。
+
 AI 顧問：在左側貼上你自己的 Gemini API key（AI Studio 建立；新式 key 以 `AQ.` 開頭，舊式 `AIza` 已被 Google 停用），
 按「AI 推薦用字」，或在卡片明細中按「AI 解說」。key 由瀏覽器直接送到 Google，不經任何中間伺服器。
 key 與模型設定會自動存在這個瀏覽器的 localStorage，下次開啟不用重貼，清空欄位即移除；`file://` 頁面共用同一個 origin，
@@ -27,6 +36,8 @@ key 與模型設定會自動存在這個瀏覽器的 localStorage，下次開啟
 .venv\Scripts\python -m nova_core.cli 陳 --born 2026-09-03T10:30 --gender girl --top 12
 .venv\Scripts\python -m nova_core.cli 歐陽 --gender boy --level 1 --first 承
 .venv\Scripts\python -m nova_core.cli 陳 --born 2026-09-03T10:30 --explain 冠宇
+.venv\Scripts\python -m nova_core.cli 李 --born 2026-10-15T09:20 --weights "三才五格=1,其他=0"     # 自訂評分權重
+.venv\Scripts\python -m nova_core.cli 李 --born 2026-10-15T09:20 --weights wuge --json             # 同上，預設名稱
 .venv\Scripts\python -m nova_core.cli 陳 --born 2026-09-03T10:30 --ai recommend --provider gemini     # 需 GEMINI_API_KEY
 .venv\Scripts\python -m nova_core.cli 陳 --born 2026-09-03T10:30 --explain 冠宇 --ai explain --provider copilot
 .venv\Scripts\python -m nova_core.cli 陳 --born 2026-09-03T10:30 --ai recommend --ai-dump              # 只印提示，不呼叫
@@ -75,7 +86,7 @@ node tests\parity.mjs                                  # 或雙擊 tests\parity.
 
 - 修正：五格「半吉」分支永遠走不到、聲調判斷對調號拼音失效、三才「中吉」等級缺漏導致永遠被過濾、`金金火` 缺項、喜用神方法切換不影響評分。
 - 資料：以 Big5 常用／次常用字為全集（純簡體字自動轉繁）；筆畫改用 Unihan 康熙部首＋餘筆並加姓名學特例（數字字、成 7 等）；拼音以臺灣讀音為主並轉數字調；字義以 OpenCC 轉臺灣正體並人工修正常用字；常用等級分三級（常見取名用字／常用／次常用），數字與虛詞預設不入候選。
-- 新增：時辰不詳模式、同一首字次數上限、指定輩字、姓氏筆畫可手動覆寫、Python/JS 一致性測試、AI 顧問。
+- 新增：時辰不詳模式、同一首字次數上限、指定輩字、姓氏筆畫可手動覆寫、自訂五維評分權重、Python/JS 一致性測試、AI 顧問。
 - 五行分數以十分之一整數累加，避免浮點雜訊影響強弱判斷。
 
 分數僅供參考。授權 MIT（`LICENSE`），第三方見 `NOTICE`。

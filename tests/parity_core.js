@@ -41,9 +41,9 @@
 
     for (const t of golden.rating) {
       const c1 = Nova.chars.lookup(t.input.c1), c2 = Nova.chars.lookup(t.input.c2);
-      const r = Nova.rating.rateName(t.input.l1, t.input.l2, c1, c2, fateFromInput(Nova, t.input.fate));
+      const r = Nova.rating.rateName(t.input.l1, t.input.l2, c1, c2, fateFromInput(Nova, t.input.fate), t.input.weights || null);
       check('rating', t.input, t.expect, { wenhua: r.wenhua, wuxing: r.wuxing, shengxiao: r.shengxiao, wuge: r.wuge,
-        yinyun: r.yinyun, total: r.total, grade: r.grade, ge: r.ge, sancai_key: r.sancaiKey });
+        yinyun: r.yinyun, total: r.total, grade: r.grade, ge: r.ge, sancai_key: r.sancaiKey, weights: r.weights });
     }
 
     for (const t of golden.combos) {
@@ -57,7 +57,7 @@
       const res = Nova.generator.generate(t.input.l1, t.input.l2, fateFromInput(Nova, t.input.fate), {
         strictness: o.strictness, excludeFemaleCaution: o.exclude_female_caution, maxLevel: o.max_level,
         avoidChars: new Set(o.avoid_chars), requireChars: new Set(o.require_chars), fixedFirst: o.fixed_first,
-        fixedSecond: o.fixed_second, topN: o.top_n, perFirstChar: o.per_first_char,
+        fixedSecond: o.fixed_second, topN: o.top_n, perFirstChar: o.per_first_char, weights: o.weights || null,
       });
       check('generate', t.input, t.expect, res.map((c) => ({ name: c.c1.char + c.c2.char, total: c.total, grade: c.grade,
         scores: c.scores, f1: c.combo.f1, f2: c.combo.f2 })));
@@ -65,13 +65,20 @@
     for (const t of golden.prompts || []) {
       const inp = t.input, o = inp.options;
       const fate = fateFromInput(Nova, inp.fate);
-      const opt = Object.assign(Nova.generator.defaultOptions(), { strictness: o.strictness, excludeFemaleCaution: o.exclude_female_caution, maxLevel: o.max_level });
+      const opt = Object.assign(Nova.generator.defaultOptions(), { strictness: o.strictness, excludeFemaleCaution: o.exclude_female_caution, maxLevel: o.max_level, weights: o.weights || null });
       const req = Nova.advisor.buildRecommend({ surname: inp.surname, l1: inp.l1, l2: inp.l2, gender: inp.gender, fate,
-        combos: Nova.generator.luckyCombos(inp.l1, inp.l2, opt), buckets: Nova.chars.byStroke(o.max_level), n: 8, preferences: inp.preferences });
+        combos: Nova.generator.luckyCombos(inp.l1, inp.l2, opt), buckets: Nova.chars.byStroke(o.max_level), n: 8,
+        preferences: inp.preferences, weights: opt.weights });
       const c1 = Nova.chars.lookup(inp.name[0]), c2 = Nova.chars.lookup(inp.name[1]);
-      const ex = Nova.advisor.buildExplain({ surname: inp.surname, c1, c2, rating: Nova.rating.rateName(inp.l1, inp.l2, c1, c2, fate), fate });
+      const ex = Nova.advisor.buildExplain({ surname: inp.surname, c1, c2, rating: Nova.rating.rateName(inp.l1, inp.l2, c1, c2, fate, opt.weights), fate });
       check('prompts', { surname: inp.surname, name: inp.name }, t.expect, { system: req.system, recommend_user: req.user,
         explain_user: ex.user, allowed_strokes: [...req.allowed.keys()].sort((a, b) => a - b) });
+    }
+    for (const t of golden.weight_parse || []) {
+      let got;
+      try { const w = Nova.rating.parseWeights(t.input); got = w === null ? null : w; }
+      catch (e) { got = 'ERROR'; }
+      check('weights', t.input, t.expect, got);
     }
     return { pass, fails, total: pass + fails.length };
   }

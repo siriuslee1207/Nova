@@ -7,7 +7,7 @@ from .. import dayan, sancai
 from ..bazi import ELEMENTS, FateData
 from ..chars import CharInfo, lookup
 from ..generator import StrokeCombo
-from ..rating import Rating
+from ..rating import Rating, normalize_weights, weights_text
 from .base import render
 
 PICKS_SCHEMA = {
@@ -57,7 +57,7 @@ class RecommendRequest:
 
 def build_recommend(surname: str, l1: int, l2: int, gender: str, fate: FateData | None,
                     combos: list[StrokeCombo], buckets: dict[int, list[CharInfo]],
-                    n: int = 8, preferences: str = '') -> RecommendRequest:
+                    n: int = 8, preferences: str = '', weights=None) -> RecommendRequest:
     top = sorted(combos, key=lambda c: -c.wuge_score)[:MAX_COMBOS]
     strokes = sorted({s for c in top for s in (c.f1, c.f2)})
     allowed: dict[int, set[str]] = {}
@@ -72,7 +72,8 @@ def build_recommend(surname: str, l1: int, l2: int, gender: str, fate: FateData 
                   yong=fate.yong if fate else '無', xi=fate.xi if fate else '無', ji=fate.ji if fate else '無',
                   chou=fate.chou if fate else '無', zodiac=fate.zodiac if fate else '無',
                   combos='；'.join(f'{c.f1}+{c.f2}：{num(c.wuge_score)}' for c in top),
-                  pools='\n'.join(pool_lines), preferences=preferences or '無特別偏好')
+                  pools='\n'.join(pool_lines), preferences=preferences or '無特別偏好',
+                  weights=weights_text(normalize_weights(weights)))
     return RecommendRequest(render('system'), user, allowed, {(c.f1, c.f2) for c in top}, top)
 
 
@@ -107,7 +108,7 @@ def build_explain(surname: str, c1: CharInfo, c2: CharInfo, r: Rating, fate: Fat
     user = render('explain_name', fullname=surname + c1.char + c2.char, pinyin=f'{c1.py[0]} {c2.py[0]}',
                   char_info='\n'.join(f'- {c.char}：{"/".join(c.py)}，{c.stroke}畫，五行{c.wx}，釋義「{c.meaning or "無"}」' for c in (c1, c2)),
                   total=num(r.total), grade=r.grade, wenhua=num(r.wenhua), wuxing=num(r.wuxing), shengxiao=num(r.shengxiao),
-                  wuge=num(r.wuge), yinyun=num(r.yinyun), wuge_detail=wuge_detail,
+                  wuge=num(r.wuge), yinyun=num(r.yinyun), wuge_detail=wuge_detail, weights=weights_text(r.weights),
                   sancai=f'{r.sancai_key} {sancai.verdict(r.sancai_key)}：{sancai.detail(r.sancai_key)}' if r.sancai_key else '無',
                   bazi_summary=bazi_summary(fate))
     return render('system'), user

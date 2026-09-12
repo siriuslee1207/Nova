@@ -26,7 +26,7 @@
   }
 
   // combos: luckyCombos 輸出（依五格分降冪）；buckets: chars.byStroke()
-  function buildRecommend({ surname, l1, l2, gender, fate, combos, buckets, n, preferences }) {
+  function buildRecommend({ surname, l1, l2, gender, fate, combos, buckets, n, preferences, weights }) {
     const top = combos.slice().sort((a, b) => b.wugeScore - a.wugeScore).slice(0, MAX_COMBOS);
     const strokes = [...new Set(top.flatMap((c) => [c.f1, c.f2]))].sort((a, b) => a - b);
     const allowed = new Map();
@@ -45,6 +45,7 @@
       combos: top.map((c) => `${c.f1}+${c.f2}：${c.wugeScore}`).join('；'),
       pools: poolLines.join('\n'),
       preferences: preferences || '無特別偏好',
+      weights: Nova.rating.weightsText(Nova.rating.normalizeWeights(weights === undefined ? null : weights)),
     });
     return { system: Nova.llm.render('system', {}), user, allowed, comboSet, topCombos: top };
   }
@@ -74,6 +75,7 @@
       char_info: [c1, c2].map((c) => `- ${c.char}：${c.py.join('/')}，${c.stroke}畫，五行${c.wx}，釋義「${c.meaning || '無'}」`).join('\n'),
       total: rating.total, grade: rating.grade, wenhua: rating.wenhua, wuxing: rating.wuxing, shengxiao: rating.shengxiao,
       wuge: rating.wuge, yinyun: rating.yinyun,
+      weights: Nova.rating.weightsText(rating.weights || Nova.rating.DEFAULT_WEIGHTS),
       wuge_detail: g ? [['天格', g.tian], ['人格', g.ren], ['地格', g.di], ['外格', g.wai], ['總格', g.zong]]
         .map(([n, v]) => `${n}${v}（${D.find(v).title}・${D.find(v).lucky}）`).join('，') : '無',
       sancai: rating.sancaiKey ? `${rating.sancaiKey} ${Nova.sancai.verdict(rating.sancaiKey)}：${Nova.sancai.detail(rating.sancaiKey)}` : '無',

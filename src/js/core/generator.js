@@ -9,6 +9,7 @@
       strictness: 'moderate', zongAccept: Nova.dayan.LUCKY_ACCEPT_DEFAULT, excludeFemaleCaution: false,
       maxLevel: 2, avoidChars: new Set(), requireChars: new Set(), fixedFirst: null, fixedSecond: null,
       topN: 10, perFirstChar: 0, minStroke: 1, maxStroke: Nova.wuge.MAX_STROKE,
+      weights: null,   // 未正規化的五維權重（rating.parseWeights 的輸出）；null 用預設
     };
   }
 
@@ -128,6 +129,7 @@
   function createRun(l1, l2, fate, options, onProgress) {
     const opt = Object.assign(defaultOptions(), options || {});
     const R = Nova.rating;
+    const w = R.normalizeWeights(opt.weights === undefined ? null : opt.weights);   // 只正規化這一次
     const combos = luckyCombos(l1, l2, opt).sort((a, b) => b.wugeScore - a.wugeScore);
     const buckets = Nova.chars.byStroke(opt.maxLevel);
     const preCache = new Map();
@@ -156,7 +158,7 @@
         const combo = combos[i];
         if (onProgress) onProgress(i, combos.length);
         if (heap.size >= k) {
-          const bound = R.totalOf(MAX_WENHUA, MAX_WUXING, MAX_SHENGXIAO, combo.wugeScore, MAX_YINYUN);
+          const bound = R.totalOf(MAX_WENHUA, MAX_WUXING, MAX_SHENGXIAO, combo.wugeScore, MAX_YINYUN, w);
           if (bound < heap.top().key[0]) continue;
         }
         const firsts = pres(combo.f1, opt.fixedFirst), seconds = pres(combo.f2, opt.fixedSecond);
@@ -164,7 +166,7 @@
           for (const b of seconds) {
             if (opt.requireChars.size && !opt.requireChars.has(a.c.char) && !opt.requireChars.has(b.c.char)) continue;
             const scores = fastScores(a, b, combo, fate);
-            const total = R.totalOf(scores[0], scores[1], scores[2], scores[3], scores[4]);
+            const total = R.totalOf(scores[0], scores[1], scores[2], scores[3], scores[4], w);
             const key = heapKey(total, a.c, b.c);
             if (heap.size < k) heap.push({ key, cand: { c1: a.c, c2: b.c, combo, scores, total, grade: R.grade(total) } });
             else if (cmpKey(key, heap.top().key) > 0) heap.replaceTop({ key, cand: { c1: a.c, c2: b.c, combo, scores, total, grade: R.grade(total) } });
@@ -174,7 +176,7 @@
       return i >= combos.length;
     }
     const result = () => diversify(sortCandidates(heap.a.map((x) => x.cand)), opt.topN, opt.perFirstChar);
-    return { step, result, total: combos.length };
+    return { step, result, total: combos.length, weights: w };
   }
 
   // onProgress(i, n) 每處理一個筆畫組合呼叫一次

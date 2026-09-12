@@ -8,6 +8,7 @@
 
 ## Nova 評分
 總分 {{total}}（{{grade}}）；文化 {{wenhua}}、五行 {{wuxing}}、生肖 {{shengxiao}}、五格 {{wuge}}、音韻 {{yinyun}}
+總分權重：{{weights}}（權重 0 的面向不計入總分，解說時可略過）
 五格：{{wuge_detail}}
 三才：{{sancai}}
 

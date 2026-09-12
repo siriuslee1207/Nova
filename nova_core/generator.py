@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from . import dayan, sancai, yinyun
 from .bazi import FateData
 from .chars import CharInfo, all_chars, by_stroke
-from .rating import Rating, clamp100, grade, is_ke, is_sheng, rate_name, rate_wuge, total_of
+from .rating import Rating, clamp100, grade, is_ke, is_sheng, normalize_weights, rate_name, rate_wuge, total_of
 from .tables import bazi as bazi_tables
 from .wuge import MAX_STROKE, WuGe, calc_wuge
 
@@ -36,6 +36,7 @@ class Options:
     per_first_char: int = 0                # >0：同一第一字在結果中最多出現次數（多樣性）；0 不限制
     min_stroke: int = 1
     max_stroke: int = MAX_STROKE
+    weights: tuple[float, ...] | None = None   # 未正規化的五維權重（rating.parse_weights 的輸出）；None 用預設
 
 
 @dataclass(frozen=True)
@@ -147,8 +148,8 @@ class Candidate:
     def name(self) -> str:
         return self.c1.char + self.c2.char
 
-    def full_rating(self, l1: int, l2: int, fate: FateData | None) -> Rating:
-        return rate_name(l1, l2, self.c1, self.c2, fate)
+    def full_rating(self, l1: int, l2: int, fate: FateData | None, weights=None) -> Rating:
+        return rate_name(l1, l2, self.c1, self.c2, fate, weights)
 
 
 def _sort_key(c: Candidate) -> tuple:
@@ -165,6 +166,7 @@ _MAX_WENHUA, _MAX_WUXING, _MAX_SHENGXIAO, _MAX_YINYUN = 92.0, 100.0, 94.0, 97.0
 
 
 def generate(l1: int, l2: int, fate: FateData | None, opt: Options) -> list[Candidate]:
+    w = normalize_weights(opt.weights)   # 只正規化這一次
     combos = lucky_combos(l1, l2, opt)
     combos.sort(key=lambda c: -c.wuge_score)  # 好的組合先算，門檻早升高
     buckets = by_stroke(opt.max_level)
@@ -189,7 +191,7 @@ def generate(l1: int, l2: int, fate: FateData | None, opt: Options) -> list[Cand
     heap: list[tuple[tuple, Candidate]] = []
     for combo in combos:
         if len(heap) >= k:
-            bound = total_of(_MAX_WENHUA, _MAX_WUXING, _MAX_SHENGXIAO, combo.wuge_score, _MAX_YINYUN)
+            bound = total_of(_MAX_WENHUA, _MAX_WUXING, _MAX_SHENGXIAO, combo.wuge_score, _MAX_YINYUN, w)
             if bound < heap[0][0][0]:
                 continue
         firsts = pres(combo.f1, opt.fixed_first)
@@ -199,7 +201,7 @@ def generate(l1: int, l2: int, fate: FateData | None, opt: Options) -> list[Cand
                 if opt.require_chars and a.c.char not in opt.require_chars and b.c.char not in opt.require_chars:
                     continue
                 scores = fast_scores(a, b, combo, fate)
-                total = total_of(*scores)
+                total = total_of(*scores, w)
                 key = _heap_key(total, a.c, b.c)
                 if len(heap) < k:
                     heapq.heappush(heap, (key, Candidate(a.c, b.c, combo, scores, total, grade(total))))

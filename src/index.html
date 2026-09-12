@@ -65,6 +65,13 @@
           <label class="check"><input id="female-caution" type="checkbox"> 排除「女性不宜」總格（21、23、28、33）</label>
         </div>
       </details>
+      <details class="adv" id="weights-box">
+        <summary>評分權重 <span id="weights-summary" class="dim"></span></summary>
+        <div class="row"><label>權重組合 <span class="with-btn"><select id="weight-preset"></select><button type="button" id="weight-reset" class="icon" title="回到預設五維權重">預設</button></span></label></div>
+        <div class="wgrid" id="weights"></div>
+        <p class="hint small">總分＝各維分數 × 權重 ÷ 權重總和（所以權重只看比例）。例：三才五格 1、其他 0，總分就等於三才五格的分數。
+          權重只影響總分與排名，不影響五格／三才的篩選（那是「嚴格度」）。</p>
+      </details>
       <div class="row actions">
         <button type="submit" id="go" class="primary">產生名字</button>
         <span id="status" class="status" aria-live="polite"></span>

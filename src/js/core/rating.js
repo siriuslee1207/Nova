@@ -1,7 +1,22 @@
 // 五維評分（對應 nova_core/rating.py）。運算順序與 Python 完全一致，分數逐位相等。
 (function (Nova) {
   'use strict';
+  const DIMS = ['wenhua', 'wuxing', 'shengxiao', 'wuge', 'yinyun'];
+  const DIM_NAMES = { wenhua: '文化', wuxing: '五行', shengxiao: '生肖', wuge: '五格三才', yinyun: '音韻' };
   const WEIGHTS = { wenhua: 0.20, wuxing: 0.25, shengxiao: 0.10, wuge: 0.30, yinyun: 0.15 };
+  const DEFAULT_WEIGHTS = DIMS.map((k) => WEIGHTS[k]);   // 和恰為 1，正規化不會改動任何一位
+  // 預設組合（未正規化；數值只是相對比例）
+  const PRESETS = {
+    default: DEFAULT_WEIGHTS.slice(),
+    wuge: [0, 0, 0, 1, 0],
+    bazi: [0.1, 0.5, 0.2, 0.1, 0.1],
+    sound: [0.3, 0.1, 0.05, 0.15, 0.4],
+    equal: [1, 1, 1, 1, 1],
+  };
+  const PRESET_NAMES = { default: '預設五維', wuge: '只看三才五格', bazi: '八字五行為主', sound: '音韻字義為主', equal: '五維等重' };
+  const WEIGHT_ALIASES = { 文化: 'wenhua', 字義: 'wenhua', 五行: 'wuxing', 八字: 'wuxing', 喜用: 'wuxing',
+    生肖: 'shengxiao', 五格: 'wuge', 三才: 'wuge', 三才五格: 'wuge', 五格三才: 'wuge', 音韻: 'yinyun', 讀音: 'yinyun' };
+  const WEIGHT_OTHER = ['其他', '其它', 'other', 'rest', '*'];
   const GE_WEIGHTS = [['tian', 0.15], ['ren', 0.30], ['di', 0.20], ['wai', 0.15], ['zong', 0.20]];
   const GE_NAMES = { tian: '天格', ren: '人格', di: '地格', wai: '外格', zong: '總格' };
   const SHENG = { 木: '火', 火: '土', 土: '金', 金: '水', 水: '木' };
@@ -11,6 +26,65 @@
   const clamp100 = (x) => (x > 100 ? 100 : x < 0 ? 0 : x);
   const isSheng = (a, b) => SHENG[a] === b;
   const isKe = (a, b) => KE[a] === b;
+
+  // 權重（null／物件／五元陣列）→ 總和為 1 的五元陣列，順序同 DIMS。
+  // 負數視為 0；全 0 或 null 回預設。同一份權重只能正規化一次（對應 Python normalize_weights）。
+  function normalizeWeights(w) {
+    if (w === null || w === undefined) return DEFAULT_WEIGHTS.slice();
+    let vals;
+    if (Array.isArray(w)) {
+      if (w.length !== 5) throw new Error('權重需為 5 個數值（文化 五行 生肖 五格 音韻）');
+      vals = w.map(Number);
+    } else {
+      vals = DIMS.map((k) => (w[k] === undefined ? WEIGHTS[k] : Number(w[k])));
+    }
+    vals = vals.map((v) => (!Number.isFinite(v) || v < 0 ? 0 : v));
+    let s = 0;
+    for (const v of vals) s += v;
+    if (s <= 0) return DEFAULT_WEIGHTS.slice();
+    if (s === 1) return vals;
+    return vals.map((v) => v / s);
+  }
+
+  const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+
+  function weightNum(k, v) {
+    const t = String(v).trim();
+    const n = t === '' ? NaN : Number(t);
+    if (!Number.isFinite(n)) throw new Error('權重「' + k + '」需為數字，收到「' + v + '」');
+    return n;
+  }
+
+  // 字串 → 未正規化的五元陣列；空字串回 null。接受：預設名稱／「三才五格=1,其他=0」／「0,0,0,1,0」
+  function parseWeights(text) {
+    const s = String(text == null ? '' : text).trim();
+    if (!s) return null;
+    if (has(PRESETS, s)) return PRESETS[s].slice();
+    const parts = s.split(/[,;、\s]+/).filter(Boolean);
+    if (parts.every((p) => !p.includes('=') && !p.includes(':'))) {
+      if (parts.length !== 5) throw new Error('位置式權重需為 5 個數字：文化,五行,生肖,五格,音韻');
+      return parts.map((p, i) => weightNum(DIM_NAMES[DIMS[i]], p));
+    }
+    const named = {};
+    let other = null;
+    for (const p of parts) {
+      const q = p.replace(/:/g, '='), i = q.indexOf('=');
+      const k = q.slice(0, i).trim(), v = q.slice(i + 1);
+      if (WEIGHT_OTHER.includes(k)) { other = weightNum(k, v); continue; }
+      const key = DIMS.includes(k) ? k : (has(WEIGHT_ALIASES, k) ? WEIGHT_ALIASES[k] : null);
+      if (!key) throw new Error('未知的權重項目「' + k + '」（可用：' + DIMS.map((d) => DIM_NAMES[d]).join('、') + '、其他）');
+      named[key] = weightNum(k, v);
+    }
+    return DIMS.map((k) => (named[k] !== undefined ? named[k] : (other === null ? WEIGHTS[k] : other)));
+  }
+
+  // 正規化後的權重 → 「文化 20%、五行 25%…」；只列不為 0 的項目
+  function weightsText(w) {
+    const parts = DIMS.map((k, i) => [k, w[i]]).filter(([, v]) => v > 0).map(([k, v]) => DIM_NAMES[k] + ' ' + round1(v * 100) + '%');
+    return parts.length ? parts.join('、') : '（無）';
+  }
+
+  const isDefaultWeights = (w) => DEFAULT_WEIGHTS.every((v, i) => v === w[i]);
 
   function grade(total) {
     if (total >= 90) return '上上';
@@ -104,22 +178,25 @@
     return [clamp100(s), d];
   }
 
-  // 加權總分；與 Python total_of 同一運算順序
-  function totalOf(wh, wx, sx, wg, yy) {
-    return round1(wh * WEIGHTS.wenhua + wx * WEIGHTS.wuxing + sx * WEIGHTS.shengxiao + wg * WEIGHTS.wuge + yy * WEIGHTS.yinyun);
+  // 加權總分；w 必須是 normalizeWeights 的輸出。與 Python total_of 同一運算順序
+  function totalOf(wh, wx, sx, wg, yy, w) {
+    const q = w || DEFAULT_WEIGHTS;
+    return round1(wh * q[0] + wx * q[1] + sx * q[2] + wg * q[3] + yy * q[4]);
   }
 
-  function rateName(l1, l2, c1, c2, fate) {
+  function rateName(l1, l2, c1, c2, fate, weights) {
+    const w = normalizeWeights(weights === undefined ? null : weights);
     const [wh, d1] = rateWenhua(c1, c2);
     const [wx, d2] = rateWuxing(c1, c2, fate);
     const [sx, d3] = rateShengxiao(c1, c2, fate);
     const [wg, d4, ge, sancaiKey] = rateWuge(l1, l2, c1.stroke, c2.stroke);
     const [yy, d5] = rateYinyun(c1, c2);
-    const total = totalOf(wh, wx, sx, wg, yy);
+    const total = totalOf(wh, wx, sx, wg, yy, w);
     return { wenhua: wh, wuxing: wx, shengxiao: sx, wuge: wg, yinyun: yy, total, grade: grade(total), ge, sancaiKey,
-      details: { wenhua: d1, wuxing: d2, shengxiao: d3, wuge: d4, yinyun: d5 } };
+      details: { wenhua: d1, wuxing: d2, shengxiao: d3, wuge: d4, yinyun: d5 }, weights: w };
   }
 
-  Nova.rating = { WEIGHTS, GE_WEIGHTS, GE_NAMES, SHENG, KE, round1, clamp100, isSheng, isKe, grade,
+  Nova.rating = { DIMS, DIM_NAMES, WEIGHTS, DEFAULT_WEIGHTS, PRESETS, PRESET_NAMES, GE_WEIGHTS, GE_NAMES, SHENG, KE,
+    round1, clamp100, isSheng, isKe, grade, normalizeWeights, parseWeights, weightsText, isDefaultWeights,
     rateWenhua, rateWuxing, rateShengxiao, rateWuge, rateYinyun, totalOf, rateName };
 })(globalThis.Nova = globalThis.Nova || {});
