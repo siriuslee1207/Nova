@@ -72,6 +72,8 @@
   }
 
   // SSE：每個 data: 是完整 GenerateContentResponse；無 [DONE]，串流關閉即結束；略過 thought 部分。
+  // 幀之間實際是 CRLFCRLF（規範允許 CRLF／LF／CR），只找 '\n\n' 會永遠切不開 → 一個字都收不到。
+  const FRAME_END = /\r\n\r\n|\n\n|\r\r/;
   async function streamText({ settings, system, user, onDelta, onStatus, signal }) {
     const res = await request(settings, ':streamGenerateContent?alt=sse', body(settings.model, system, user, false, null, settings.thinking), signal, onStatus);
     const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
@@ -80,10 +82,10 @@
       const { value, done } = await reader.read();
       if (done) break;
       buf += value;
-      let i;
-      while ((i = buf.indexOf('\n\n')) !== -1) {
-        const frame = buf.slice(0, i); buf = buf.slice(i + 2);
-        const line = frame.split('\n').find((l) => l.startsWith('data:'));
+      let m;
+      while ((m = FRAME_END.exec(buf))) {
+        const frame = buf.slice(0, m.index); buf = buf.slice(m.index + m[0].length);
+        const line = frame.split(/\r\n|\n|\r/).find((l) => l.startsWith('data:'));
         if (!line) continue;
         let chunk;
         try { chunk = JSON.parse(line.slice(5).trim()); } catch (_) { continue; }
