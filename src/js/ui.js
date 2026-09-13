@@ -248,7 +248,8 @@
   const COMBOS_KEY = 'nova.combos.v1';
   const GRID_LABEL = { tian: '天格', ren: '人格', di: '地格', wai: '外格', zong: '總格' };
   const TONES = [['1', 'ˉ', '一聲'], ['2', 'ˊ', '二聲'], ['3', 'ˇ', '三聲'], ['4', 'ˋ', '四聲'], ['0', '˙', '輕聲']];   // yinyun.tone 的值
-  const cstate = { ctx: null, filt: null, rows: [], sel: null, pick: [null, null], wxf: ['', ''], tf: ['', ''], names: [] };
+  // wxf／tf：兩個字各自的五行、聲調過濾，都可複選（Set 空＝全部；同一排多選是 OR，五行與聲調之間是 AND）
+  const cstate = { ctx: null, filt: null, rows: [], sel: null, pick: [null, null], wxf: [new Set(), new Set()], tf: [new Set(), new Set()], names: [] };
   let urlCombo = null, urlPick = null;   // 網址 &combo=19,6[&pick=薇宇]：開頁時預先選好組合（與字），供分享與測試
 
   function loadCombosFilter() {
@@ -367,16 +368,24 @@
     }).join('');
   }
 
+  // 五行／聲調晶片：點「全部」（值為空）清空條件，點其他值加入或移除；清空後就是不限
+  function toggleFilter(set, v) { if (!v) set.clear(); else if (!set.delete(v)) set.add(v); }
+
   function charListHtml(slot, stroke, list) {
     const fate = cstate.ctx.fate, wxf = cstate.wxf[slot], tf = cstate.tf[slot], pick = cstate.pick[slot];
     const toneOf = (c) => String(Nova.yinyun.tone(c.py[0]));   // 以主要讀音的聲調為準；0 = 輕聲
-    const byTone = tf === '' ? list : list.filter((c) => toneOf(c) === tf);   // 只套聲調（供五行按鈕計數）
-    const byWx = wxf ? list.filter((c) => c.wx === wxf) : list;               // 只套五行（供聲調按鈕計數）
-    const shown = byTone.filter((c) => !wxf || c.wx === wxf);
+    const hitWx = (c) => !wxf.size || wxf.has(c.wx);           // 空＝不限
+    const hitTone = (c) => !tf.size || tf.has(toneOf(c));
+    const byTone = list.filter(hitTone);   // 只套聲調（供五行按鈕計數）
+    const byWx = list.filter(hitWx);       // 只套五行（供聲調按鈕計數）
+    const shown = byTone.filter(hitWx);
+    // 每顆晶片是獨立開關，計數不含同一排其他選項（勾了也還看得到別的五行／聲調各有幾字）
+    const chip = (on, attr, val, label, n) =>
+      `<button type="button" class="chip${on ? ' on' : ''}" aria-pressed="${on ? 'true' : 'false'}" data-slot="${slot}" data-${attr}="${esc(val)}">${label}<small>${n}</small></button>`;
     const wxChips = ['', ...Nova.bazi.ELEMENTS].map((e) =>
-      `<button type="button" class="chip${wxf === e ? ' on' : ''}" data-slot="${slot}" data-wxf="${e}">${e ? wxTag(e) + e : '全部'}<small>${e ? byTone.filter((c) => c.wx === e).length : byTone.length}</small></button>`).join('');
+      chip(e ? wxf.has(e) : !wxf.size, 'wxf', e, e ? wxTag(e) + e : '全部', e ? byTone.filter((c) => c.wx === e).length : byTone.length)).join('');
     const toneChips = [['', '', '全部'], ...TONES].map(([t, mark, name]) =>
-      `<button type="button" class="chip${tf === t ? ' on' : ''}" data-slot="${slot}" data-tf="${t}">${mark ? '<b class="tm">' + mark + '</b>' : ''}${name}<small>${t === '' ? byWx.length : byWx.filter((c) => toneOf(c) === t).length}</small></button>`).join('');
+      chip(t ? tf.has(t) : !tf.size, 'tf', t, (mark ? '<b class="tm">' + mark + '</b>' : '') + name, t ? byWx.filter((c) => toneOf(c) === t).length : byWx.length)).join('');
     const tiles = shown.map((c) => {
       const hi = fate && (c.wx === fate.yong || c.wx === fate.xi), lo = fate && (c.wx === fate.ji || c.wx === fate.chou);
       const on = pick && pick.char === c.char;
@@ -385,7 +394,7 @@
     return `<div class="charlist" data-slot="${slot}"><h4>${slot === 0 ? '第一字' : '第二字'} ${stroke} 畫 <span class="dim">（${shown.length}${shown.length !== list.length ? '／' + list.length : ''} 字）</span></h4>
       <div class="wxfilter chips"><span class="fl">五行</span>${wxChips}</div>
       <div class="wxfilter chips"><span class="fl">聲調</span>${toneChips}</div>
-      <div class="chars">${tiles || '<span class="dim">（沒有符合這個五行／聲調的字）</span>'}</div>
+      <div class="chars">${tiles || '<span class="dim">（沒有同時符合所選五行與聲調的字）</span>'}</div>
       <p class="chinfo">${pick ? chInfoHtml(pick) : ''}</p></div>`;
   }
 
@@ -407,7 +416,7 @@
       <h4>已選 ${r.f1} + ${r.f2} 畫 <span class="dim">五格分（原評分）${r.wugeScore}</span></h4>
       <div class="ge">${geCells(r.ge)}</div>
       <p>三才 ${esc(r.sancaiKey)}・<b class="cg-${esc(r.cdiGrade)}">${esc(r.cdiGrade)}</b> <span class="dim">（原表 ${esc(r.fateVerdict)}）</span><br><span class="dim">${esc(S.detail(r.sancaiKey))}</span></p>
-      <p class="hint small">點一個第一字、再點一個第二字，下方就會出現這個名字的評分；字表可依五行、注音聲調過濾（聲調取主要讀音），點到的字會在字表下方顯示拼音與字義。${legend}</p>
+      <p class="hint small">點一個第一字、再點一個第二字，下方就會出現這個名字的評分；字表可依五行、注音聲調過濾（聲調取主要讀音），兩排都可複選——同一排選多個是「其中之一」，五行與聲調則要同時符合，點「全部」取消該排的條件。點到的字會在字表下方顯示拼音與字義。${legend}</p>
     </div>
     <div class="charpick">${charListHtml(0, r.f1, lists[0])}${charListHtml(1, r.f2, lists[1])}</div>`;
   }
@@ -457,8 +466,8 @@
       composeName();
       return;
     }
-    if (b.dataset.wxf !== undefined) { cstate.wxf[Number(b.dataset.slot)] = b.dataset.wxf; renderPick(); return; }
-    if (b.dataset.tf !== undefined) { cstate.tf[Number(b.dataset.slot)] = b.dataset.tf; renderPick(); return; }
+    if (b.dataset.wxf !== undefined) { toggleFilter(cstate.wxf[Number(b.dataset.slot)], b.dataset.wxf); renderPick(); return; }
+    if (b.dataset.tf !== undefined) { toggleFilter(cstate.tf[Number(b.dataset.slot)], b.dataset.tf); renderPick(); return; }
     if (b.dataset.act === 'drop-tian') {
       cstate.filt.grids = cstate.filt.grids.filter((k) => k !== 'tian');
       const cb = $('#combos-filter input[data-f="grid"][value="tian"]');
