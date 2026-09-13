@@ -42,13 +42,13 @@ git add docs/index.html && git commit -m "publish 線上版" && git push
 ```
 
 GitHub 上只要設定一次：Settings → Pages → Source 選 **Deploy from a branch**、Branch `main`、資料夾 `/docs`。
-網址是 `https://<帳號>.github.io/<repo>/`，一樣吃網址參數（`…/?surname=陳&born=2026-09-03T10:30&gender=girl`）。
+網址是 <https://siriuslee1207.github.io/Nova/>（大小寫要對），一樣吃網址參數（`…/Nova/?surname=陳&born=2026-09-03T10:30&gender=girl`）。
 刻意不在 GitHub Actions 重新建置：ETL 來源之一 Unihan.zip 是 Unicode 的 "latest"，會隨版本移動，CI 重跑不保證產出與本機一致。
 
 幾件要知道的事：
 
 - GitHub Free 方案只有 **public repo** 能開 Pages，也就是原始碼與內建字典都會公開。Gemini API key 不受影響——它只存在使用者自己的瀏覽器、直接送到 Google。
-- 網頁的 origin 從 `file://` 變成 `https://<帳號>.github.io`，所以 `file://` 版存的 key、偏好與歷史紀錄**不會**帶過去（相對地也不再與其他本機 HTML 共用 localStorage，比較安全）。
+- 網頁的 origin 從 `file://` 變成 `https://siriuslee1207.github.io`，所以 `file://` 版存的 key、偏好與歷史紀錄**不會**帶過去（相對地也不再與其他本機 HTML 共用 localStorage，比較安全）。
 - iOS 用 https 開就會正常執行 JavaScript，Safari 的「加入主畫面」可以做成 App 圖示；`file://` 那個「快速查看不執行 JS」的限制不存在。
 - Pages 會快取，剛 push 完手機可能還是舊的，等一兩分鐘或強制重新整理。單檔 1.3 MB，首次載入會傳這麼多（Pages 有 gzip）。
 

@@ -10,7 +10,7 @@ Unihan.zip 是 Unicode 的 "latest"，會隨版本移動，CI 重跑不保證跟
     git add docs/index.html && git commit -m "publish" && git push
 
 GitHub 那邊只要設定一次：Settings → Pages → Source = Deploy from a branch，
-Branch = main、資料夾 = /docs。網址是 https://<帳號>.github.io/<repo>/。
+Branch = main、資料夾 = /docs。網址是 https://siriuslee1207.github.io/Nova/。
 """
 from __future__ import annotations
 
