@@ -71,7 +71,7 @@
     const g = rating.ge;
     const D = Nova.dayan;
     const user = Nova.llm.render('explain_name', {
-      fullname: surname + c1.char + c2.char, pinyin: `${c1.py[0]} ${c2.py[0]}`,
+      fullname: surname + c1.char + c2.char, pinyin: `${c1.py[0]} ${c2.py[0]}`, first: c1.char, second: c2.char,
       char_info: [c1, c2].map((c) => `- ${c.char}：${c.py.join('/')}，${c.stroke}畫，五行${c.wx}，釋義「${c.meaning || '無'}」`).join('\n'),
       total: rating.total, grade: rating.grade, wenhua: rating.wenhua, wuxing: rating.wuxing, shengxiao: rating.shengxiao,
       wuge: rating.wuge, yinyun: rating.yinyun,

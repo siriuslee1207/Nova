@@ -106,6 +106,7 @@ def build_explain(surname: str, c1: CharInfo, c2: CharInfo, r: Rating, fate: Fat
     wuge_detail = '，'.join(f'{n}{v}（{dayan.find(v).title}・{dayan.find(v).lucky}）' for n, v in
                           (('天格', g.tian), ('人格', g.ren), ('地格', g.di), ('外格', g.wai), ('總格', g.zong))) if g else '無'
     user = render('explain_name', fullname=surname + c1.char + c2.char, pinyin=f'{c1.py[0]} {c2.py[0]}',
+                  first=c1.char, second=c2.char,
                   char_info='\n'.join(f'- {c.char}：{"/".join(c.py)}，{c.stroke}畫，五行{c.wx}，釋義「{c.meaning or "無"}」' for c in (c1, c2)),
                   total=num(r.total), grade=r.grade, wenhua=num(r.wenhua), wuxing=num(r.wuxing), shengxiao=num(r.shengxiao),
                   wuge=num(r.wuge), yinyun=num(r.yinyun), wuge_detail=wuge_detail, weights=weights_text(r.weights),

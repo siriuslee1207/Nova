@@ -60,6 +60,7 @@ def test_build_explain_prompt():
     assert '陳冠宇（guan4 yu3）' in user and '總分 86.8（上吉）' in user
     assert '天格17（剛強・半吉）' in user and '三才：金土土 大吉' in user
     assert '丙午 丙申 庚辰 辛巳；日主 庚金（弱）' in user
+    assert '上聯第一字必須是「冠」' in user and '下聯第一字必須是「宇」' in user
 
 
 def test_cli_ai_dump(capsys):
