@@ -82,7 +82,8 @@
     }
     for (const t of golden.combo_table || []) {
       const rows = Nova.combos.enumerateCombos(t.input.l1, t.input.l2, { sancaiGrades: new Set(t.input.sancai_grades),
-        grids: t.input.grids, jishuGrades: new Set(t.input.jishu_grades), excludeFemaleCaution: t.input.exclude_female_caution });
+        grids: t.input.grids, jishuTable: t.input.jishu_table || '36', jishuCustom: new Set(t.input.jishu_custom || []),
+        jishuGrades: new Set(t.input.jishu_grades), excludeFemaleCaution: t.input.exclude_female_caution });
       check('combo_table', t.input, t.expect, { count: rows.length, rows: rows.map((r) => [r.f1, r.f2, r.cdiGrade, r.wugeScore,
         Nova.combos.GRIDS.map((k) => r.grades[k]).join('/')]) });
     }

@@ -17,6 +17,7 @@ from . import bazi as bazi_mod
 from . import chars, sancai
 from .combos import GRIDS, ComboFilter, char_lists, combo_row, enumerate_combos, group_by_first, tian_of
 from .dayan import GRADES as JISHU_GRADES
+from .dayan import JISHU_TABLE_LABELS, JISHU_TABLES
 from .dayan import cdi_grade as jishu_cdi_grade
 from .dayan import find as find_dayan
 from .dayan import grade as jishu_grade
@@ -76,7 +77,7 @@ def build_parser() -> argparse.ArgumentParser:
                         + '，或「三才五格=1,其他=0」「wuge=2」（未列到的維持預設），或五個數字「0,0,0,1,0」'
                           '（順序：文化,五行,生肖,五格,音韻）')
     p.add_argument('--explain', metavar='NAME', help='只對此名字（2 字）輸出完整評分報告')
-    c = p.add_argument_group('筆畫組合選字（謝達輝三才吉凶表＋36 吉數＋吉數等級；與 --strictness 無關）')
+    c = p.add_argument_group('筆畫組合選字（謝達輝三才吉凶表＋吉數表（可自選）＋吉數等級；與 --strictness 無關）')
     c.add_argument('--combos', action='store_true', help='列出所有合格的（第一字,第二字）筆畫組合，依第一字筆畫分組')
     c.add_argument('--combo', metavar='F1,F2', help='列出此筆畫組合的兩份字表（配合 --level、--avoid），如 19,6')
     c.add_argument('--sancai-grades', default='最吉,吉', metavar='GRADES',
@@ -84,6 +85,10 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument('--grids', default=','.join(GRIDS), metavar='GRIDS',
                    help='須為吉數的格，預設五格全部（tian,ren,di,wai,zong 或 天格,人格,地格,外格,總格）；'
                         '天格由姓氏決定，天格非吉數時可去掉 tian')
+    c.add_argument('--jishu-table', default='36', choices=[t for t in JISHU_TABLES if t != 'custom'], metavar='TABLE',
+                   help='吉數表：' + '；'.join(f'{k}＝{v}' for k, v in JISHU_TABLE_LABELS.items() if k != 'custom') + '；預設 36')
+    c.add_argument('--jishu', metavar='NUMBERS',
+                   help='自選吉數（1–81，逗號或空白分隔，如 1,3,5,6,7,8）；給了就以這組數字判定吉數、不看 --jishu-table')
     c.add_argument('--jishu-grades', default=','.join(JISHU_GRADES), metavar='GRADES',
                    help='吉數等級（人格,地格,外格,總格 四格都要落在其中；天格由姓氏決定不納入），可選 '
                         + ','.join(JISHU_GRADES)
@@ -205,7 +210,17 @@ def combo_filter_from_args(args, female: bool) -> ComboFilter:
     jgrades = _split_list(args.jishu_grades)
     if not jgrades or any(g not in JISHU_GRADES for g in jgrades):
         raise SystemExit('--jishu-grades 只能選 ' + ','.join(JISHU_GRADES) + '（逗號分隔）')
+    table, custom = args.jishu_table, frozenset()
+    if args.jishu:
+        try:
+            custom = frozenset(int(x) for x in _split_list(args.jishu))
+        except ValueError:
+            custom = frozenset()
+        if not custom or any(not 1 <= n <= 81 for n in custom):
+            raise SystemExit('--jishu 需為 1–81 的數字（逗號或空白分隔），如 1,3,5')
+        table = 'custom'
     return ComboFilter(sancai_grades=frozenset(grades), grids=tuple(k for k in GRIDS if k in grids),
+                       jishu_table=table, jishu_custom=custom,
                        jishu_grades=frozenset(jgrades), exclude_female_caution=female)
 
 
@@ -218,11 +233,13 @@ def _combo_line(r) -> str:
 
 def combos_cmd(args, surname: str, l1: int, l2: int, filt: ComboFilter) -> None:
     rows = enumerate_combos(l1, l2, filt)
+    js_set = filt.jishu_set()
     tian = tian_of(l1, l2)
     td = find_dayan(tian)
-    tian_info = {'n': tian, 'lucky': td.lucky, 'title': td.title, 'jishu': is_jishu(tian),
+    tian_info = {'n': tian, 'lucky': td.lucky, 'title': td.title, 'jishu': is_jishu(tian, js_set),
                  'grade': jishu_grade(tian), 'cdi_grade': jishu_cdi_grade(tian)}
     filt_out = {'sancai_grades': [g for g in sancai.CDI_SELECTABLE if g in filt.sancai_grades], 'grids': list(filt.grids),
+                'jishu_table': filt.jishu_table, 'jishu': sorted(js_set),
                 'jishu_grades': [g for g in JISHU_GRADES if g in filt.jishu_grades],
                 'exclude_female_caution': filt.exclude_female_caution}
     head = {'surname': surname, 'l1': l1, 'l2': l2, 'tian': tian_info, 'filter': filt_out}
@@ -234,7 +251,7 @@ def combos_cmd(args, surname: str, l1: int, l2: int, filt: ComboFilter) -> None:
         if len(parts) != 2 or not all(1 <= x <= MAX_STROKE for x in parts):
             raise SystemExit(f'--combo 需為「第一字筆畫,第二字筆畫」（1–{MAX_STROKE}），如 19,6')
         f1, f2 = parts
-        row = combo_row(l1, l2, f1, f2)
+        row = combo_row(l1, l2, f1, f2, js_set)
         inside = any(r.f1 == f1 and r.f2 == f2 for r in rows)
         first, second = char_lists(f1, f2, args.level, frozenset(args.avoid))
         if args.json:
@@ -254,7 +271,8 @@ def combos_cmd(args, surname: str, l1: int, l2: int, filt: ComboFilter) -> None:
                          ensure_ascii=False, indent=1))
         return
     print(f"姓 {surname} {l1}{'+' + str(l2) if l2 else ''} 畫  天格 {tian}（{td.title}・{td.lucky}）"
-          f"{'吉數' if tian_info['jishu'] else '非吉數'}・{tian_info['grade']}")
+          f"{'吉數' if tian_info['jishu'] else '非吉數'}・{tian_info['grade']}"
+          f"  吉數表 {JISHU_TABLE_LABELS[filt.jishu_table]} {len(js_set)} 個")
     if not rows and 'tian' in filt.grids and not tian_info['jishu']:
         rest = tuple(k for k in filt.grids if k != 'tian')
         alt = enumerate_combos(l1, l2, replace(filt, grids=rest))

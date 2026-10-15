@@ -25,6 +25,49 @@ def test_jishu_table():
         dayan.is_jishu(0)
 
 
+def test_jishu_tables():
+    fate = {n for n in range(1, 82) if dayan.find(n).lucky == '吉'}
+    cdi = {n for n in range(1, 82) if dayan.cdi_grade(n) == '吉'}
+    assert dayan.JISHU_TABLES == ('36', 'fate', 'cdi', 'custom') and set(dayan.JISHU_TABLE_LABELS) == set(dayan.JISHU_TABLES)
+    assert dayan.jishu_table('36') == dayan.jishu() and len(dayan.jishu_table('36')) == 36
+    assert dayan.jishu_table('fate') == fate and len(fate) == 30
+    assert dayan.jishu_table('cdi') == cdi and len(cdi) == 34 and cdi - dayan.jishu() == {73} and dayan.jishu() - cdi == {55, 57, 61}
+    assert fate & cdi == {n for n in range(1, 82) if dayan.grade(n) == '大吉'} and len(fate & cdi) == 28   # 大吉＝兩表皆吉
+    assert dayan.jishu_of() == dayan.jishu() and dayan.jishu_of('cdi') == cdi
+    assert dayan.jishu_of('custom', {1, 82, 3, 0, -5, 81}) == {1, 3, 81} and dayan.jishu_of('custom') == frozenset()
+    assert dayan.is_jishu(9, frozenset({9})) and not dayan.is_jishu(9, cdi) and dayan.is_jishu(90, frozenset({9}))
+    with pytest.raises(ValueError):
+        dayan.jishu_table('xx')
+    with pytest.raises(ValueError):
+        dayan.jishu_table('both')   # 2026-10-15 拿掉：表不只兩張，名稱會誤導
+
+
+def test_jishu_table_filter():
+    # 自選全部 81 個＝吉數條件形同不存在；自選空集合而有勾格＝必空；換表只改吉數那一層，三才與等級不受影響
+    every = pairs(enumerate_combos(16, 0, ComboFilter(grids=())))
+    assert every == pairs(enumerate_combos(16, 0, ComboFilter(jishu_table='custom', jishu_custom=frozenset(range(1, 82)))))
+    assert enumerate_combos(16, 0, ComboFilter(jishu_table='custom')) == []
+    assert pairs(enumerate_combos(16, 0, ComboFilter(jishu_table='custom', grids=()))) == every
+    assert tian_ok(16, 0, frozenset({17})) and not tian_ok(16, 0, frozenset({18}))
+    default = enumerate_combos(16, 0)
+    assert enumerate_combos(16, 0, ComboFilter(jishu_table='36')) == default
+    assert enumerate_combos(16, 0, ComboFilter(jishu_table='fate')) == []   # 陳 天格 17 在 36 吉數內、fate 表是「半吉」
+    fate = enumerate_combos(16, 0, ComboFilter(jishu_table='fate', grids=GRADE_GRIDS))
+    assert fate and pairs(fate) <= pairs(default)
+    assert all(not r.jishu['tian'] and all(r.jishu[k] for k in GRADE_GRIDS) for r in fate)
+    assert all(dayan.find(getattr(r.ge, k)).lucky == '吉' for r in fate for k in GRADE_GRIDS)
+    cdi = enumerate_combos(16, 0, ComboFilter(jishu_table='cdi'))
+    assert cdi and all(dayan.cdi_grade(getattr(r.ge, k)) == '吉' and r.jishu[k] for r in cdi for k in GRIDS)
+    assert enumerate_combos(16, 0, ComboFilter(jishu_table='custom', jishu_custom=dayan.jishu_table('cdi'))) == cdi
+    only = enumerate_combos(16, 0, ComboFilter(jishu_table='custom', jishu_custom=frozenset({17, 29, 35, 47, 63})))
+    assert [(r.f1, r.f2) for r in only] == [(19, 28)]
+    row = combo_row(16, 0, 19, 28, frozenset({17}))
+    assert row.jishu == {'tian': True, 'ren': False, 'di': False, 'wai': False, 'zong': False}
+    assert combo_row(16, 0, 19, 28).jishu == {k: True for k in GRIDS}
+    with pytest.raises(ValueError):
+        enumerate_combos(16, 0, ComboFilter(jishu_table='xx'))
+
+
 def test_jishu_grade_table():
     t = sancai.tables.jishu_grade()
     assert tuple(t['grades']) == dayan.GRADES and set(t['jishu_grades']) == dayan.JISHU_GRADES
@@ -157,10 +200,32 @@ def test_cli_combos(capsys):
     assert '符合 11 組' in out and '人地外總等級限 大吉' in out
     cli_main(['陳', '--combos', '--jishu-grades', '大吉'])   # 天格 17 是「吉」，撇除後仍有組合
     assert '符合 1 組' in capsys.readouterr().out
+    cli_main(['陳', '--combos', '--jishu-table', 'fate'])
+    out = capsys.readouterr().out
+    assert '吉數表 fate 81 數理「吉」 30 個' in out and '天格 17' in out and '非吉數' in out   # 17 在 fate 表是「半吉」
+    cli_main(['陳', '--combos', '--jishu-table', 'fate', '--grids', '人格,地格,外格,總格'])
+    assert '符合' in capsys.readouterr().out
+    cli_main(['陳', '--combos', '--jishu', '17 35,47、29 63', '--json'])
+    data = json.loads(capsys.readouterr().out)
+    assert data['filter']['jishu_table'] == 'custom' and data['filter']['jishu'] == [17, 29, 35, 47, 63]
+    assert data['count'] == 1 and (data['groups'][0]['rows'][0]['f1'], data['groups'][0]['rows'][0]['f2']) == (19, 28)
+    cli_main(['陳', '--combo', '19,28', '--jishu', '17', '--json'])
+    data = json.loads(capsys.readouterr().out)
+    assert data['combo']['jishu'] == {'tian': True, 'ren': False, 'di': False, 'wai': False, 'zong': False} and data['in_filter'] is False
+    with pytest.raises(SystemExit):
+        cli_main(['陳', '--combos', '--jishu', '0,3'])
+    with pytest.raises(SystemExit):
+        cli_main(['陳', '--combos', '--jishu', 'abc'])
+    with pytest.raises(SystemExit):
+        cli_main(['陳', '--combos', '--jishu-table', 'xx'])
+    with pytest.raises(SystemExit):
+        cli_main(['陳', '--combos', '--jishu-table', 'both'])
+    capsys.readouterr()   # 上面幾次失敗前已印出「陳=16畫」備註，先清掉
     cli_main(['陳', '--combos', '--json'])
     data = json.loads(capsys.readouterr().out)
     assert data['count'] == 16 and data['tian'] == {'n': 17, 'lucky': '半吉', 'title': '剛強', 'jishu': True,
                                                     'grade': '吉', 'cdi_grade': '吉'}
+    assert data['filter']['jishu_table'] == '36' and data['filter']['jishu'] == sorted(dayan.jishu())
     assert data['filter']['jishu_grades'] == list(dayan.GRADES)
     assert data['groups'][0]['rows'][0]['grades'] == {k: dayan.grade(data['groups'][0]['rows'][0]['ge'][k]) for k in GRIDS}
     assert [g['f1'] for g in data['groups']] == sorted(g['f1'] for g in data['groups'])

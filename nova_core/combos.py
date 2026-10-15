@@ -1,8 +1,9 @@
 """筆畫組合選字（對應 src/js/core/combos.js）：列出姓氏筆畫下所有合格的名字筆畫組合 (f1, f2)。
 
 篩選鏈與 generator.lucky_combos 獨立（那邊看「嚴格度」）：
-三才等級（謝達輝表 data/tables/sancai_cdi.json，預設 最吉／吉）→ 勾選的格（預設五格全部，含天格）皆為 36 吉數
-（data/tables/jishu36.json）→ 人地外總四格的吉數等級（data/tables/jishu_grade.json，預設五級全收＝不限制）→
+三才等級（謝達輝表 data/tables/sancai_cdi.json，預設 最吉／吉）→ 勾選的格（預設五格全部，含天格）皆為吉數
+（吉數表 jishu_table 預設 36＝data/tables/jishu36.json，也可選 fate 吉／謝達輝 吉，或 custom 自選 jishu_custom）
+→ 人地外總四格的吉數等級（data/tables/jishu_grade.json，預設五級全收＝不限制）→
 （可選）排除女性不宜總格。迭代 f1 升冪、f2 升冪，Python 與 JS 逐列相同。
 吉數與等級是兩條獨立的條件：吉數看勾選的格（可含天格），等級一律只看名字改得動的人、地、外、總四格
 （GRADE_GRIDS）——天格由姓氏決定，不納入等級條件，只在列表中標示供參考。
@@ -27,10 +28,16 @@ DEFAULT_JISHU_GRADES = frozenset(dayan.GRADES)          # 預設五級全收＝�
 class ComboFilter:
     sancai_grades: frozenset[str] = DEFAULT_GRADES     # 子集合 ⊂ sancai.CDI_SELECTABLE
     grids: tuple[str, ...] = GRIDS                      # 須為吉數的格（依 GRIDS 順序）
+    jishu_table: str = '36'                             # 吉數表（dayan.JISHU_TABLES：36／fate／cdi／both／custom）
+    jishu_custom: frozenset[int] = frozenset()          # jishu_table == 'custom' 時的自選吉數（1..81）
     jishu_grades: frozenset[str] = DEFAULT_JISHU_GRADES  # 人地外總四格都要落在這些吉數等級內 ⊂ dayan.GRADES
     exclude_female_caution: bool = False                # 排除 女性不宜 總格（21 23 28 33）
     min_stroke: int = 1
     max_stroke: int = MAX_STROKE
+
+    def jishu_set(self) -> frozenset[int]:
+        """實際判定吉數用的集合（吉數表名稱＋自選解析後）。"""
+        return dayan.jishu_of(self.jishu_table, self.jishu_custom)
 
 
 @dataclass(frozen=True)
@@ -57,22 +64,23 @@ def tian_of(l1: int, l2: int) -> int:
     return calc_wuge(l1, l2, 1, 1).tian
 
 
-def tian_ok(l1: int, l2: int) -> bool:
-    return dayan.is_jishu(tian_of(l1, l2))
+def tian_ok(l1: int, l2: int, jishu_set: frozenset[int] | None = None) -> bool:
+    return dayan.is_jishu(tian_of(l1, l2), jishu_set)
 
 
-def combo_row(l1: int, l2: int, f1: int, f2: int) -> ComboRow:
-    """不過濾，直接描述一組筆畫組合。"""
+def combo_row(l1: int, l2: int, f1: int, f2: int, jishu_set: frozenset[int] | None = None) -> ComboRow:
+    """不過濾，直接描述一組筆畫組合；jishu_set 不給＝36 吉數。"""
     g = calc_wuge(l1, l2, f1, f2)
     key = sancai.key_of(g.tian, g.ren, g.di)
-    js = {k: dayan.is_jishu(getattr(g, k)) for k in GRIDS}
+    js = {k: dayan.is_jishu(getattr(g, k), jishu_set) for k in GRIDS}
     gr = {k: dayan.grade(getattr(g, k)) for k in GRIDS}
     score, _, _, _ = rate_wuge(l1, l2, f1, f2)
     return ComboRow(f1, f2, g, key, sancai.cdi_grade(key), sancai.cdi_no(key), sancai.verdict(key), js, gr, score)
 
 
 def enumerate_combos(l1: int, l2: int, filt: ComboFilter = ComboFilter()) -> list[ComboRow]:
-    if 'tian' in filt.grids and not tian_ok(l1, l2):
+    js_set = filt.jishu_set()
+    if 'tian' in filt.grids and not tian_ok(l1, l2, js_set):
         return []
     out: list[ComboRow] = []
     for f1 in range(filt.min_stroke, filt.max_stroke + 1):
@@ -82,7 +90,7 @@ def enumerate_combos(l1: int, l2: int, filt: ComboFilter = ComboFilter()) -> lis
             grade = sancai.cdi_grade(key)
             if grade not in filt.sancai_grades:
                 continue
-            js = {k: dayan.is_jishu(getattr(g, k)) for k in GRIDS}
+            js = {k: dayan.is_jishu(getattr(g, k), js_set) for k in GRIDS}
             if not all(js[k] for k in filt.grids):
                 continue
             gr = {k: dayan.grade(getattr(g, k)) for k in GRIDS}

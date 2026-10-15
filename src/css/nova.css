@@ -129,6 +129,10 @@ label.chip.cg-最吉, label.chip.cg-吉, label.chip.cg-平吉, label.chip.cg-半
 button.f2 { border-radius: 12px; padding: .15rem .55rem; border: 2px solid var(--line); font-weight: 600; line-height: 1.25; display: inline-flex; flex-direction: column; align-items: center; min-width: 3rem; }
 button.f2 small { font-size: .65rem; font-weight: 500; }
 button.f2.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.f2 .ge5 { font-size: .6rem; font-weight: 400; color: var(--muted); white-space: nowrap; letter-spacing: .02em; }
+button.f2 .ge5 .bad { color: var(--bad); font-weight: 700; }
+button.f2.on .ge5 { color: inherit; opacity: .85; }
+button.f2.on .ge5 .bad { color: #ffd6d6; }
 .cg-最吉 { border-color: var(--good); color: var(--good); } .cg-吉 { border-color: #3d8f5f; color: #3d8f5f; }
 .cg-平吉 { border-color: var(--mid); color: var(--mid); } .cg-半吉 { border-color: #c69a3a; color: #a67c1d; }
 .cg-凶 { border-color: var(--bad); color: var(--bad); } .cg-最凶 { border-color: #7a1a10; color: #7a1a10; }
@@ -138,6 +142,17 @@ button.f2.on { background: var(--accent); color: var(--accent-ink); border-color
 .jg-凶 { border-color: var(--bad); color: var(--bad); }
 label.chip.jg-大吉, label.chip.jg-吉, label.chip.jg-半吉, label.chip.jg-半凶, label.chip.jg-凶 { border: 1px solid currentColor; background: #fff; }
 label.chip small { color: var(--muted); font-size: .7rem; }
+/* 吉數表（單選）與自選吉數面板 */
+label.chip.jt { border: 1px solid transparent; }
+label.chip.jt:has(input:checked) { border-color: var(--accent); background: #fff; }
+.jlist { display: flex; flex-wrap: wrap; gap: .2rem .25rem; margin: .1rem 0 .4rem; }
+.jlist .jl { font-size: .75rem; line-height: 1.4; border: 1px solid currentColor; border-radius: 6px; padding: 0 .32rem; background: #fff; }
+.jcustom { border-top: 1px dashed var(--line); margin: .2rem 0 .3rem; padding-top: .3rem; }
+.jnums { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.5rem, 1fr)); gap: .25rem; margin: .2rem 0 .4rem; }
+button.jn { border: 1px solid var(--line); border-radius: 8px; padding: .15rem .2rem; font-size: .82rem; line-height: 1.3; opacity: .45; }
+button.jn.on { opacity: 1; font-weight: 700; border-width: 2px; background: color-mix(in srgb, currentColor 12%, #fff); }
+.jcustom button.chip { cursor: pointer; }
+#jishu-text { flex: 1 1 14rem; min-width: 10rem; font-size: .85rem; }
 .tianfail { background: #fdecec; color: var(--bad); border-radius: 10px; padding: .5rem .8rem; }
 .tianfail button.chip { margin-left: .4rem; cursor: pointer; }
 .combo-sel { border: 1px dashed var(--accent); border-radius: 12px; padding: .4rem .9rem .6rem; margin: .8rem 0; background: #fffaf3; }
@@ -186,6 +201,9 @@ button.ch.on { background: var(--accent); color: var(--accent-ink); border-color
   button.icon { padding: .4rem .7rem; }
   button.ch { font-size: 1.3rem; padding: .45rem .55rem .65rem .5rem; }
   button.f2 { padding: .3rem .7rem; min-width: 3.6rem; }
+  button.jn { padding: .4rem .2rem; font-size: 1rem; }
+  button.f2 .ge5 { font-size: .7rem; }
+  .jlist .jl { font-size: .9rem; padding: .1rem .4rem; }
   label.chip, .charlist .wxfilter .chip { padding: .3rem .7rem; }
   .chars { max-height: 17rem; }
   .card .name { font-size: 1.45rem; }
