@@ -136,6 +136,10 @@ label.chip.cg-最吉, label.chip.cg-吉, label.chip.cg-平吉, label.chip.cg-半
 button.f2 { border-radius: 12px; padding: .15rem .55rem; border: 2px solid var(--line); font-weight: 600; line-height: 1.25; display: inline-flex; flex-direction: column; align-items: center; min-width: 3rem; }
 button.f2 small { font-size: .65rem; font-weight: 500; }
 button.f2.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.f2 .ge5 { font-size: .6rem; font-weight: 400; color: var(--muted); white-space: nowrap; letter-spacing: .02em; }
+button.f2 .ge5 .bad { color: var(--bad); font-weight: 700; }
+button.f2.on .ge5 { color: inherit; opacity: .85; }
+button.f2.on .ge5 .bad { color: #ffd6d6; }
 .cg-最吉 { border-color: var(--good); color: var(--good); } .cg-吉 { border-color: #3d8f5f; color: #3d8f5f; }
 .cg-平吉 { border-color: var(--mid); color: var(--mid); } .cg-半吉 { border-color: #c69a3a; color: #a67c1d; }
 .cg-凶 { border-color: var(--bad); color: var(--bad); } .cg-最凶 { border-color: #7a1a10; color: #7a1a10; }
@@ -145,6 +149,17 @@ button.f2.on { background: var(--accent); color: var(--accent-ink); border-color
 .jg-凶 { border-color: var(--bad); color: var(--bad); }
 label.chip.jg-大吉, label.chip.jg-吉, label.chip.jg-半吉, label.chip.jg-半凶, label.chip.jg-凶 { border: 1px solid currentColor; background: #fff; }
 label.chip small { color: var(--muted); font-size: .7rem; }
+/* 吉數表（單選）與自選吉數面板 */
+label.chip.jt { border: 1px solid transparent; }
+label.chip.jt:has(input:checked) { border-color: var(--accent); background: #fff; }
+.jlist { display: flex; flex-wrap: wrap; gap: .2rem .25rem; margin: .1rem 0 .4rem; }
+.jlist .jl { font-size: .75rem; line-height: 1.4; border: 1px solid currentColor; border-radius: 6px; padding: 0 .32rem; background: #fff; }
+.jcustom { border-top: 1px dashed var(--line); margin: .2rem 0 .3rem; padding-top: .3rem; }
+.jnums { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.5rem, 1fr)); gap: .25rem; margin: .2rem 0 .4rem; }
+button.jn { border: 1px solid var(--line); border-radius: 8px; padding: .15rem .2rem; font-size: .82rem; line-height: 1.3; opacity: .45; }
+button.jn.on { opacity: 1; font-weight: 700; border-width: 2px; background: color-mix(in srgb, currentColor 12%, #fff); }
+.jcustom button.chip { cursor: pointer; }
+#jishu-text { flex: 1 1 14rem; min-width: 10rem; font-size: .85rem; }
 .tianfail { background: #fdecec; color: var(--bad); border-radius: 10px; padding: .5rem .8rem; }
 .tianfail button.chip { margin-left: .4rem; cursor: pointer; }
 .combo-sel { border: 1px dashed var(--accent); border-radius: 12px; padding: .4rem .9rem .6rem; margin: .8rem 0; background: #fffaf3; }
@@ -193,6 +208,9 @@ button.ch.on { background: var(--accent); color: var(--accent-ink); border-color
   button.icon { padding: .4rem .7rem; }
   button.ch { font-size: 1.3rem; padding: .45rem .55rem .65rem .5rem; }
   button.f2 { padding: .3rem .7rem; min-width: 3.6rem; }
+  button.jn { padding: .4rem .2rem; font-size: 1rem; }
+  button.f2 .ge5 { font-size: .7rem; }
+  .jlist .jl { font-size: .9rem; padding: .1rem .4rem; }
   label.chip, .charlist .wxfilter .chip { padding: .3rem .7rem; }
   .chars { max-height: 17rem; }
   .card .name { font-size: 1.45rem; }
@@ -303,7 +321,7 @@ button.ch.on { background: var(--accent); color: var(--accent-ink); border-color
       </details>
       <div class="row actions">
         <button type="submit" id="go" class="primary">產生名字</button>
-        <button type="button" id="combos-go" title="依三才吉凶表、36 吉數與吉數等級列出所有合格筆畫組合，再逐步選字">筆畫組合選字</button>
+        <button type="button" id="combos-go" title="依三才吉凶表、吉數表（可自選）與吉數等級列出所有合格筆畫組合，再逐步選字">筆畫組合選字</button>
         <span id="status" class="status" aria-live="polite"></span>
       </div>
     </form>
@@ -8925,7 +8943,8 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
 </script>
 <script data-src="dayan.js">
 // 八十一數理（對應 nova_core/dayan.py）；資料來自 NOVA_TABLES.dayan（data/tables/dayan81.json）。
-// 另含「筆畫組合選字」用的 36 吉數（NOVA_TABLES.jishu）與吉數等級（NOVA_TABLES.jishuGrade：大吉／吉／半吉／半凶／凶）。
+// 另含「筆畫組合選字」用的 36 吉數（NOVA_TABLES.jishu）與吉數等級（NOVA_TABLES.jishuGrade：大吉／吉／半吉／半凶／凶），
+// 以及可切換的吉數表（JISHU_TABLES：36／fate 吉／謝達輝 吉／自選）。
 (function (Nova) {
   'use strict';
   const LUCKY_ACCEPT_DEFAULT = new Set(['吉', '半吉']);
@@ -8943,9 +8962,32 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
   // 36 吉數（NOVA_TABLES.jishu，使用者指定表）；「筆畫組合選字」以此判定五格，與 lucky 分級無關
   let jishuSet = null;
   function jishu() { return jishuSet || (jishuSet = new Set(globalThis.NOVA_TABLES.jishu.numbers)); }
-  function isJishu(n) {
+  // jishuSet 不給＝36 吉數，給了（Set，1..81）就以它判定
+  function isJishu(n, jishuSet) {
     if (!(n > 0)) throw new RangeError('數理必須為正整數: ' + n);
-    return jishu().has(((n - 1) % 81) + 1);
+    return (jishuSet || jishu()).has(((n - 1) % 81) + 1);
+  }
+
+  // 吉數表（對應 dayan.py）：「筆畫組合選字」的吉數可從既有的幾張表擇一，或自選一組數字（custom）
+  const JISHU_TABLES = ['36', 'fate', 'cdi', 'custom'];
+  const JISHU_TABLE_LABEL = { 36: '熊崎氏 36 吉數', fate: 'fate 81 數理「吉」', cdi: '謝達輝 81 劃表「吉」', custom: '自選' };
+  const ALL81 = Array.from({ length: 81 }, (_, i) => i + 1);
+  const tableCache = new Map();
+  // 具名吉數表 → Set（共用快取，呼叫端不可改動它）：36＝jishu36；fate＝dayan81 的「吉」；cdi＝謝達輝 81 劃表的「吉」
+  function jishuTable(name) {
+    if (tableCache.has(name)) return tableCache.get(name);
+    let s;
+    if (name === '36') s = new Set(jishu());
+    else if (name === 'fate') s = new Set(ALL81.filter((n) => find(n).lucky === '吉'));
+    else if (name === 'cdi') s = new Set(ALL81.filter((n) => cdiGrade(n) === '吉'));
+    else throw new RangeError('未知的吉數表: ' + name + '（可選 ' + JISHU_TABLES.join(',') + '）');
+    tableCache.set(name, s);
+    return s;
+  }
+  // 表名＋自選數字 → 實際判定用的 Set；custom 只在 table === 'custom' 時採用，超過 81 循環、0 以下丟掉
+  function jishuOf(table, custom) {
+    if (table === 'custom') return new Set([...(custom || [])].map(Number).filter((n) => n > 0).map((n) => ((n - 1) % 81) + 1));
+    return jishuTable(table == null ? '36' : String(table));
   }
 
   // 吉數等級（NOVA_TABLES.jishuGrade，data/tables/jishu_grade.json）：大吉＋吉 恰為 36 吉數
@@ -8963,7 +9005,7 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
     return globalThis.NOVA_TABLES.jishuGrade.cdi[(n - 1) % 81];
   }
 
-  Nova.dayan = { LUCKY_ACCEPT_DEFAULT, GRADES, JISHU_GRADES, find, isLucky, jishu, isJishu, grade, cdiGrade };
+  Nova.dayan = { LUCKY_ACCEPT_DEFAULT, GRADES, JISHU_GRADES, JISHU_TABLES, JISHU_TABLE_LABEL, find, isLucky, jishu, isJishu, jishuTable, jishuOf, grade, cdiGrade };
 })(globalThis.Nova = globalThis.Nova || {});
 
 </script>
@@ -9600,8 +9642,8 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
 </script>
 <script data-src="combos.js">
 // 筆畫組合選字（對應 nova_core/combos.py）：列出姓氏筆畫下所有合格的名字筆畫組合 (f1, f2)。
-// 篩選鏈與 generator.luckyCombos 獨立：三才等級（謝達輝表 NOVA_TABLES.sancaiCdi）→ 勾選的格皆為 36 吉數（NOVA_TABLES.jishu，
-// 含天格）→ 人地外總四格的吉數等級（NOVA_TABLES.jishuGrade，預設五級全收＝不限制）→（可選）排除女性不宜總格。
+// 篩選鏈與 generator.luckyCombos 獨立：三才等級（謝達輝表 NOVA_TABLES.sancaiCdi）→ 勾選的格皆為吉數（吉數表 jishuTable
+// 預設 36＝NOVA_TABLES.jishu，也可選 fate 吉／謝達輝 吉，或 custom 自選 jishuCustom；含天格）→ 人地外總四格的吉數等級（NOVA_TABLES.jishuGrade，預設五級全收＝不限制）→（可選）排除女性不宜總格。
 // 吉數看勾選的格、等級只看名字改得動的四格（天格由姓氏決定，撇除）。迭代 f1 升冪、f2 升冪，與 Python 逐列相同。
 (function (Nova) {
   'use strict';
@@ -9610,8 +9652,8 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
   const DEFAULT_GRADES = ['最吉', '吉'];
 
   function defaultFilter() {
-    return { sancaiGrades: new Set(DEFAULT_GRADES), grids: GRIDS.slice(), jishuGrades: new Set(Nova.dayan.GRADES),
-      excludeFemaleCaution: false, minStroke: 1, maxStroke: Nova.wuge.MAX_STROKE };
+    return { sancaiGrades: new Set(DEFAULT_GRADES), grids: GRIDS.slice(), jishuTable: '36', jishuCustom: new Set(),
+      jishuGrades: new Set(Nova.dayan.GRADES), excludeFemaleCaution: false, minStroke: 1, maxStroke: Nova.wuge.MAX_STROKE };
   }
 
   // filt 可只給部分欄位（陣列也收）；缺的補預設，避免部分選項造成迴圈不跑（見 generator.luckyCombos 的註解）
@@ -9620,29 +9662,33 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
     for (const k in (filt || {})) if (filt[k] !== undefined) o[k] = filt[k];
     if (!(o.sancaiGrades instanceof Set)) o.sancaiGrades = new Set(o.sancaiGrades);
     if (!(o.jishuGrades instanceof Set)) o.jishuGrades = new Set(o.jishuGrades);
+    if (!(o.jishuCustom instanceof Set)) o.jishuCustom = new Set(o.jishuCustom || []);
     o.grids = GRIDS.filter((k) => [...o.grids].includes(k));
     return o;
   }
 
+  // 吉數表名＋自選 → 實際判定用的 Set（filt 可為部分欄位）
+  function jishuSetOf(filt) { const o = normFilter(filt); return Nova.dayan.jishuOf(o.jishuTable, o.jishuCustom); }
+
   // 天格只看姓氏筆畫（單姓 l1+1、複姓 l1+l2）
   function tianOf(l1, l2) { return Nova.wuge.calcWuge(l1, l2, 1, 1).tian; }
-  function tianOk(l1, l2) { return Nova.dayan.isJishu(tianOf(l1, l2)); }
+  function tianOk(l1, l2, jishuSet) { return Nova.dayan.isJishu(tianOf(l1, l2), jishuSet); }
 
-  // 不過濾，直接描述一組筆畫組合
-  function comboRow(l1, l2, f1, f2) {
+  // 不過濾，直接描述一組筆畫組合；jishuSet 不給＝36 吉數
+  function comboRow(l1, l2, f1, f2, jishuSet) {
     const S = Nova.sancai, D = Nova.dayan;
     const g = Nova.wuge.calcWuge(l1, l2, f1, f2);
     const key = S.keyOf(g.tian, g.ren, g.di);
     const jishu = {}, grades = {};
-    for (const k of GRIDS) { jishu[k] = D.isJishu(g[k]); grades[k] = D.grade(g[k]); }
+    for (const k of GRIDS) { jishu[k] = D.isJishu(g[k], jishuSet); grades[k] = D.grade(g[k]); }
     return { f1, f2, ge: g, sancaiKey: key, cdiGrade: S.cdiGrade(key), cdiNo: S.cdiNo(key), fateVerdict: S.verdict(key),
       jishu, grades, wugeScore: Nova.rating.rateWuge(l1, l2, f1, f2)[0] };
   }
 
   function enumerateCombos(l1, l2, filt) {
     const o = normFilter(filt);
-    const D = Nova.dayan;
-    if (o.grids.includes('tian') && !tianOk(l1, l2)) return [];
+    const D = Nova.dayan, js = D.jishuOf(o.jishuTable, o.jishuCustom);
+    if (o.grids.includes('tian') && !tianOk(l1, l2, js)) return [];
     const S = Nova.sancai, out = [];
     for (let f1 = o.minStroke; f1 <= o.maxStroke; f1++) {
       for (let f2 = o.minStroke; f2 <= o.maxStroke; f2++) {
@@ -9651,7 +9697,7 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
         const grade = S.cdiGrade(key);
         if (!o.sancaiGrades.has(grade)) continue;
         const jishu = {};
-        for (const k of GRIDS) jishu[k] = D.isJishu(g[k]);
+        for (const k of GRIDS) jishu[k] = D.isJishu(g[k], js);
         if (!o.grids.every((k) => jishu[k])) continue;
         const grades = {};
         for (const k of GRIDS) grades[k] = D.grade(g[k]);
@@ -9689,7 +9735,7 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
     return [pick(f1), pick(f2)];
   }
 
-  Nova.combos = { GRIDS, GRADE_GRIDS, DEFAULT_GRADES, defaultFilter, normFilter, tianOf, tianOk, comboRow, enumerateCombos, groupByFirst, buckets, charLists };
+  Nova.combos = { GRIDS, GRADE_GRIDS, DEFAULT_GRADES, defaultFilter, normFilter, jishuSetOf, tianOf, tianOk, comboRow, enumerateCombos, groupByFirst, buckets, charLists };
 })(globalThis.Nova = globalThis.Nova || {});
 
 </script>
@@ -10285,7 +10331,7 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
   }
 
   // ---------------------------------------------------------------- 筆畫組合選字
-  // 與「產生名字」獨立（核心在 js/core/combos.js）：謝達輝三才等級 → 勾選的格皆為 36 吉數（含天格）
+  // 與「產生名字」獨立（核心在 js/core/combos.js）：謝達輝三才等級 → 勾選的格皆為吉數（吉數表可選 36／fate／謝達輝或自選；含天格）
   // → 人地外總四格的吉數等級（大吉／吉／半吉／半凶／凶，預設全收；天格不計）→ 依第一字筆畫分組列出
   // 所有 (第一字, 第二字) 筆畫；點一組 → 兩份字表 → 點第一字＋第二字 → 用現有評分卡評分。過濾條件記在這個瀏覽器。
   const COMBOS_KEY = 'nova.combos.v1';
@@ -10308,12 +10354,19 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
         const jg = s.jishuGrades.filter((x) => Nova.dayan.GRADES.includes(x));
         if (jg.length) f.jishuGrades = new Set(jg);
       }
+      if (s && Nova.dayan.JISHU_TABLES.includes(s.jishuTable)) f.jishuTable = s.jishuTable;
+      if (s && Array.isArray(s.jishuCustom)) f.jishuCustom = new Set(s.jishuCustom.map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 81));
     } catch (_) { /* ignore */ }
     return f;
   }
   function saveCombosFilter(f) {
-    try { localStorage.setItem(COMBOS_KEY, JSON.stringify({ grades: [...f.sancaiGrades], grids: f.grids, jishuGrades: [...f.jishuGrades] })); } catch (_) { /* ignore */ }
+    try {
+      localStorage.setItem(COMBOS_KEY, JSON.stringify({ grades: [...f.sancaiGrades], grids: f.grids, jishuGrades: [...f.jishuGrades],
+        jishuTable: f.jishuTable, jishuCustom: [...f.jishuCustom].sort((a, b) => a - b) }));
+    } catch (_) { /* ignore */ }
   }
+  // 目前判定吉數用的集合（吉數表＋自選解析後）
+  const jishuSet = () => Nova.combos.jishuSetOf(cstate.filt);
   const combosMounted = () => !!$('#combos') && !!cstate.ctx;
 
   function onCombos() {
@@ -10350,7 +10403,7 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
   }
 
   function tianBadge() {
-    const { l1, l2 } = cstate.ctx, n = Nova.combos.tianOf(l1, l2), D = Nova.dayan, dy = D.find(n), ok = D.isJishu(n), jg = D.grade(n);
+    const { l1, l2 } = cstate.ctx, n = Nova.combos.tianOf(l1, l2), D = Nova.dayan, dy = D.find(n), ok = D.isJishu(n, jishuSet()), jg = D.grade(n);
     return `天格 <b class="n">${n}</b> <span class="lucky-${esc(dy.lucky)}">${esc(dy.title)}・${esc(dy.lucky)}</span> <span class="${ok ? 'jishu-ok' : 'jishu-bad'}">${ok ? '吉數' : '非吉數'}</span> <b class="jg-${esc(jg)}" title="吉數等級 ${esc(jg)}（謝達輝 81 劃表 ${esc(D.cdiGrade(n))}）；天格不納入等級條件">${esc(jg)}</b>`;
   }
 
@@ -10361,7 +10414,10 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
       `<label class="chip cg-${esc(g)}"><input type="checkbox" data-f="grade" value="${esc(g)}"${f.sancaiGrades.has(g) ? ' checked' : ''}>${esc(g)}</label>`).join('');
     const gridChips = Nova.combos.GRIDS.map((k) =>
       `<label class="chip"><input type="checkbox" data-f="grid" value="${k}"${f.grids.includes(k) ? ' checked' : ''}>${GRID_LABEL[k]}${k === 'tian' ? ' ' + Nova.combos.tianOf(l1, l2) : ''}</label>`).join('');
-    const jishu = [...Nova.dayan.jishu()].sort((a, b) => a - b);
+    const tableChips = Nova.dayan.JISHU_TABLES.map((t) => {
+      const n = t === 'custom' ? f.jishuCustom.size : Nova.dayan.jishuTable(t).size;
+      return `<label class="chip jt"><input type="radio" name="jtable" data-f="jtable" value="${esc(t)}"${f.jishuTable === t ? ' checked' : ''}>${esc(Nova.dayan.JISHU_TABLE_LABEL[t])}<small>${n}</small></label>`;
+    }).join('');
     const jgCounts = Nova.dayan.GRADES.reduce((m, g) => (m[g] = 0, m), {});
     for (let n = 1; n <= 81; n++) jgCounts[Nova.dayan.grade(n)]++;
     const jgChips = Nova.dayan.GRADES.map((g) =>
@@ -10370,13 +10426,64 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
       <div class="combos-head"><h3>筆畫組合選字 <span class="dim">姓 ${esc(surname)} ${l1}${l2 ? '+' + l2 : ''} 畫</span></h3><div class="tian" id="combos-tian">${tianBadge()}</div></div>
       <div class="combos-filter" id="combos-filter">
         <div class="frow"><span class="flabel">三才吉凶表（謝達輝）</span>${gradeChips}</div>
-        <div class="frow"><span class="flabel">須為吉數的格</span>${gridChips}<span class="dim small" title="${jishu.join(' ')}">吉數表 ${jishu.length} 個</span></div>
-        <div class="frow"><span class="flabel">吉數等級（人地外總）</span>${jgChips}<span class="dim small" title="天格由姓氏決定、改不了，不納入這條件">天格不計；大吉＋吉＝36 吉數；全勾＝不限制</span></div>
+        <div class="frow"><span class="flabel">吉數表</span>${tableChips}<span class="dim small" id="jishu-count"></span></div>
+        <div class="jlist" id="jishu-list" hidden></div>
+        <div class="jcustom" id="jishu-custom" hidden>${jishuCustomHtml()}</div>
+        <div class="frow"><span class="flabel">須為吉數的格</span>${gridChips}</div>
+        <div class="frow"><span class="flabel">吉數等級（人地外總）</span>${jgChips}<span class="dim small" title="天格由姓氏決定、改不了，不納入這條件">天格不計；大吉＋吉＝熊崎氏 36 吉數；全勾＝不限制</span></div>
         <p class="hint small">另沿用左側「字集」「排除字」「排除女性不宜總格」。五格分是原評分（fate 81 數理表），只作排序參考。</p>
       </div>
       <div id="combos-groups"></div><div id="combos-pick"></div><div id="combos-names"></div>
     </section>`;
+    syncJishuUi();
     renderGroups(); renderPick(); renderNames();
+  }
+
+  // 自選吉數面板：81 顆數字開關（邊框顏色＝吉數等級）＋「載入」某張表當起點＋可直接輸入數字
+  function jishuCustomHtml() {
+    const D = Nova.dayan, f = cstate.filt;
+    const nums = Array.from({ length: 81 }, (_, i) => i + 1).map((n) => {
+      const dy = D.find(n), jg = D.grade(n), on = f.jishuCustom.has(n);
+      return `<button type="button" class="jn jg-${esc(jg)}${on ? ' on' : ''}" data-jn="${n}" aria-pressed="${on ? 'true' : 'false'}" title="${n} ${esc(dy.title)}・${esc(dy.lucky)}・等級 ${esc(jg)}">${n}</button>`;
+    }).join('');
+    const seeds = D.JISHU_TABLES.filter((t) => t !== 'custom').map((t) =>
+      `<button type="button" class="chip" data-act="jseed" data-table="${esc(t)}">${esc(D.JISHU_TABLE_LABEL[t])}</button>`).join('')
+      + '<button type="button" class="chip" data-act="jseed" data-table="">全清</button>';
+    return `<div class="jnums">${nums}</div>
+      <div class="frow"><span class="flabel">載入後再增減</span>${seeds}</div>
+      <div class="frow"><span class="flabel">或直接輸入</span><input type="text" id="jishu-text" value="${[...f.jishuCustom].sort((a, b) => a - b).join(' ')}" placeholder="1–81，空白或逗號分隔" aria-label="自選吉數"></div>`;
+  }
+
+  // 吉數表／自選變動後：顯示或隱藏自選面板、同步 81 顆開關與文字欄、更新個數
+  function syncJishuUi() {
+    const f = cstate.filt, D = Nova.dayan, list = [...jishuSet()].sort((a, b) => a - b);
+    const panel = $('#jishu-custom');
+    if (panel) {
+      panel.hidden = f.jishuTable !== 'custom';
+      panel.querySelectorAll('button.jn').forEach((b) => {
+        const on = f.jishuCustom.has(Number(b.dataset.jn));
+        b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      const t = $('#jishu-text');
+      if (t && document.activeElement !== t) t.value = [...f.jishuCustom].sort((a, b) => a - b).join(' ');
+      const cl = $('#combos-filter input[data-f="jtable"][value="custom"]');
+      if (cl) cl.parentElement.querySelector('small').textContent = f.jishuCustom.size;
+    }
+    const cnt = $('#jishu-count');
+    if (cnt) { cnt.textContent = `${D.JISHU_TABLE_LABEL[f.jishuTable]} ${list.length} 個`; cnt.title = list.join(' '); }
+    const jl = $('#jishu-list');
+    if (jl) {                                         // 具名表：把成員數字直接列出來（自選時 81 顆開關本身就是清單）
+      jl.hidden = f.jishuTable === 'custom';
+      jl.innerHTML = list.map((n) => {
+        const dy = D.find(n), jg = D.grade(n);
+        return `<span class="jl jg-${esc(jg)}" title="${n} ${esc(dy.title)}・${esc(dy.lucky)}・等級 ${esc(jg)}">${n}</span>`;
+      }).join('');
+    }
+  }
+
+  function onJishuEdited() {
+    saveCombosFilter(cstate.filt); syncJishuUi(); recomputeCombos(); renderGroups(); renderPick();
+    setBusy(false, `${cstate.rows.length} 組合格筆畫組合`);
   }
 
   function renderGroups() {
@@ -10384,7 +10491,11 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
     if (!box) return;
     const { l1, l2 } = cstate.ctx, f = cstate.filt, rows = cstate.rows;
     $('#combos-tian').innerHTML = tianBadge();
-    if (!rows.length && f.grids.includes('tian') && !Nova.combos.tianOk(l1, l2)) {
+    if (!rows.length && f.jishuTable === 'custom' && !f.jishuCustom.size && f.grids.length) {
+      box.innerHTML = '<p class="hint">自選吉數還是空的：點上面的數字，或先「載入」一張表再增減。</p>';
+      return;
+    }
+    if (!rows.length && f.grids.includes('tian') && !Nova.combos.tianOk(l1, l2, jishuSet())) {
       const alt = Nova.combos.enumerateCombos(l1, l2, Object.assign({}, f, { grids: f.grids.filter((k) => k !== 'tian') })).length;
       box.innerHTML = `<p class="hint tianfail">天格 ${Nova.combos.tianOf(l1, l2)} 不在吉數內；天格由姓氏決定、無法選擇。取消勾選「天格」即可列出其他各格皆吉數的組合（${alt} 組）。<button type="button" class="chip" data-act="drop-tian">取消勾選天格</button></p>`;
       return;
@@ -10392,21 +10503,24 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
     if (!rows.length) { box.innerHTML = '<p class="hint">沒有符合的組合：請至少勾選一個三才等級，或加入「平吉」、放寬吉數等級、減少須為吉數的格。</p>'; return; }
     const groups = Nova.combos.groupByFirst(rows);
     const gradesTxt = Nova.sancai.CDI_SELECTABLE.filter((g) => f.sancaiGrades.has(g)).join('、');
-    const gridsTxt = f.grids.length ? f.grids.map((k) => GRID_LABEL[k][0]).join('') + ' 皆吉數' : '不限吉數';
+    const tableTxt = f.jishuTable === '36' ? '' : `（${Nova.dayan.JISHU_TABLE_LABEL[f.jishuTable]} ${jishuSet().size} 個）`;
+    const gridsTxt = f.grids.length ? f.grids.map((k) => GRID_LABEL[k][0]).join('') + ' 皆吉數' + tableTxt : '不限吉數';
     const jgTxt = f.jishuGrades.size >= Nova.dayan.GRADES.length ? ''
       : '；人地外總等級限 ' + Nova.dayan.GRADES.filter((g) => f.jishuGrades.has(g)).join('、');
-    box.innerHTML = `<p class="combos-summary">符合 <b>${rows.length}</b> 組・第一字 ${groups.length} 種筆畫 <span class="dim">（三才 ${esc(gradesTxt)}；${gridsTxt}${esc(jgTxt)}）點第二字筆畫選定組合</span></p>`
+    box.innerHTML = `<p class="combos-summary">符合 <b>${rows.length}</b> 組・第一字 ${groups.length} 種筆畫 <span class="dim">（三才 ${esc(gradesTxt)}；${gridsTxt}${esc(jgTxt)}）點第二字筆畫選定組合；按鈕下方是天·人·地·外·總五格數字，<span class="jishu-bad">紅字</span>＝不在吉數表內</span></p>`
       + groups.map(([f1, rs]) => `<div class="cgroup"><span class="f1">第一字 ${f1} 畫</span>${rs.map((r) => {
         const g = r.ge, on = cstate.sel && cstate.sel.f1 === r.f1 && cstate.sel.f2 === r.f2;
-        const marks = Nova.combos.GRIDS.map((k) => GRID_LABEL[k][0] + r.grades[k]).join(' ');
-        return `<button type="button" class="f2 cg-${esc(r.cdiGrade)}${on ? ' on' : ''}" data-f1="${r.f1}" data-f2="${r.f2}" aria-pressed="${on ? 'true' : 'false'}" title="五格 ${g.tian}/${g.ren}/${g.di}/${g.wai}/${g.zong}（${marks}）・三才 ${esc(r.sancaiKey)} ${esc(r.cdiGrade)}（原表 ${esc(r.fateVerdict)}）・五格分 ${r.wugeScore}">${r.f2}<small>${esc(r.cdiGrade)}</small></button>`;
+        const marks = Nova.combos.GRIDS.map((k) => GRID_LABEL[k][0] + (r.jishu[k] ? '✓' : '✗') + r.grades[k]).join(' ');
+        // 五格數字直接印在按鈕上（天/人/地/外/總），不是吉數的標紅——手機看不到 title 也看得到
+        const ge5 = Nova.combos.GRIDS.map((k) => `<span class="${r.jishu[k] ? 'ok' : 'bad'}">${g[k]}</span>`).join('·');
+        return `<button type="button" class="f2 cg-${esc(r.cdiGrade)}${on ? ' on' : ''}" data-f1="${r.f1}" data-f2="${r.f2}" aria-pressed="${on ? 'true' : 'false'}" title="五格 ${g.tian}/${g.ren}/${g.di}/${g.wai}/${g.zong}（${marks}）・三才 ${esc(r.sancaiKey)} ${esc(r.cdiGrade)}（原表 ${esc(r.fateVerdict)}）・五格分 ${r.wugeScore}">${r.f2}<small>${esc(r.cdiGrade)}</small><small class="ge5">${ge5}</small></button>`;
       }).join('')}</div>`).join('');
   }
 
   function geCells(g) {
-    const D = Nova.dayan, W = Nova.wuge;
+    const D = Nova.dayan, W = Nova.wuge, js = jishuSet();
     return [['天格', g.tian], ['人格', g.ren], ['地格', g.di], ['外格', g.wai], ['總格', g.zong]].map(([n, v]) => {
-      const dy = D.find(v), ok = D.isJishu(v), jg = D.grade(v);
+      const dy = D.find(v), ok = D.isJishu(v, js), jg = D.grade(v);
       return `<div><small>${n}</small><span class="n">${v}</span><small class="lucky-${esc(dy.lucky)}">${esc(dy.title)}・${esc(dy.lucky)}</small><small class="${ok ? 'jishu-ok' : 'jishu-bad'}">${ok ? '吉數' : '非吉數'}・${W.yinyangOf(v)}${W.elementOf(v)}</small><small class="jg-${esc(jg)}" title="吉數等級（謝達輝 81 劃表 ${esc(D.cdiGrade(v))}）">${esc(jg)}</small></div>`;
     }).join('');
   }
@@ -10511,6 +10625,17 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
     }
     if (b.dataset.wxf !== undefined) { toggleFilter(cstate.wxf[Number(b.dataset.slot)], b.dataset.wxf); renderPick(); return; }
     if (b.dataset.tf !== undefined) { toggleFilter(cstate.tf[Number(b.dataset.slot)], b.dataset.tf); renderPick(); return; }
+    if (b.dataset.jn !== undefined) {                 // 自選吉數：單顆數字開關
+      const n = Number(b.dataset.jn), f = cstate.filt;
+      if (!f.jishuCustom.delete(n)) f.jishuCustom.add(n);
+      onJishuEdited();
+      return;
+    }
+    if (b.dataset.act === 'jseed') {                  // 自選吉數：載入一張表當起點／全清
+      cstate.filt.jishuCustom = b.dataset.table ? new Set(Nova.dayan.jishuTable(b.dataset.table)) : new Set();
+      onJishuEdited();
+      return;
+    }
     if (b.dataset.act === 'drop-tian') {
       cstate.filt.grids = cstate.filt.grids.filter((k) => k !== 'tian');
       const cb = $('#combos-filter input[data-f="grid"][value="tian"]');
@@ -10528,7 +10653,14 @@ globalThis.NOVA_PROMPTS = {"explain_name": "請為以下名字寫一段給父母
     f.sancaiGrades = new Set([...document.querySelectorAll('#combos-filter input[data-f="grade"]:checked')].map((i) => i.value));
     f.grids = [...document.querySelectorAll('#combos-filter input[data-f="grid"]:checked')].map((i) => i.value);
     f.jishuGrades = new Set([...document.querySelectorAll('#combos-filter input[data-f="jgrade"]:checked')].map((i) => i.value));
-    saveCombosFilter(f); recomputeCombos(); renderGroups(); renderPick();
+    if (ev.target.id === 'jishu-text') {              // 直接輸入的自選吉數：只收 1–81
+      f.jishuCustom = new Set(ev.target.value.split(/[^0-9]+/).map(Number).filter((n) => n >= 1 && n <= 81));
+    }
+    const tsel = document.querySelector('#combos-filter input[data-f="jtable"]:checked'), prev = f.jishuTable;
+    f.jishuTable = tsel && Nova.dayan.JISHU_TABLES.includes(tsel.value) ? tsel.value : '36';
+    // 第一次切到「自選」時先把剛才那張表載進來，使用者從它增減即可
+    if (f.jishuTable === 'custom' && prev !== 'custom' && !f.jishuCustom.size) f.jishuCustom = new Set(Nova.dayan.jishuTable(prev));
+    saveCombosFilter(f); syncJishuUi(); recomputeCombos(); renderGroups(); renderPick();
     setBusy(false, `${cstate.rows.length} 組合格筆畫組合`);
   }
 
