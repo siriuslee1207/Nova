@@ -4,6 +4,7 @@ Nova 修正：評分讀取使用者選定方法（balance / geju）算出的用�
 Nova 修正：五行分數以「十分之一」整數累加（藏干權重皆為 0.1 的倍數），避免浮點雜訊影響強弱判斷，
            Python 與 JS 結果必然一致。
 Nova 新增：時辰不詳時只以年、月、日三柱計五行強弱，時柱留空。
+Nova 修正：晚子時（23:00–23:59）日柱以次日計（lunar 的 sect=1）；時柱本來就以次日日干起算，不受影響。
 """
 from __future__ import annotations
 
@@ -51,6 +52,7 @@ def four_pillars(year: int, month: int, day: int, hour: int, minute: int) -> lis
     if Solar is None:
         raise ImportError('lunar_python 未安裝：pip install lunar_python')
     ec = Solar.fromYmdHms(year, month, day, hour, minute, 0).getLunar().getEightChar()
+    ec.setSect(1)   # 晚子時（23:00 起）日柱算次日；預設 sect=2 會算當天
     return [ec.getYear(), ec.getMonth(), ec.getDay(), ec.getTime()]
 
 

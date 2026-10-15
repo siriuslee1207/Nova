@@ -11,6 +11,7 @@
   function fourPillars(year, month, day, hour, minute) {
     if (typeof Solar === 'undefined') throw new Error('lunar.js 未載入');
     const ec = Solar.fromYmdHms(year, month, day, hour, minute, 0).getLunar().getEightChar();
+    ec.setSect(1); // 晚子時（23:00 起）日柱算次日；預設 sect=2 會算當天
     return [ec.getYear(), ec.getMonth(), ec.getDay(), ec.getTime()];
   }
 

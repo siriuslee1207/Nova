@@ -33,6 +33,17 @@ def test_bazi_geju_and_hour_unknown():
     assert h.fen == {'木': 0.2, '火': 2.7, '土': 1.0, '金': 1.6, '水': 0.5}
 
 
+def test_bazi_late_zi_hour_counts_as_next_day():
+    # 23:00 起為晚子時：日柱以次日（辛巳）計；22:59 仍是當天（庚辰 丁亥）
+    late = bazi.compute(2026, 9, 3, 23, 30)
+    assert late.sizhu == ['丙午', '丙申', '辛巳', '戊子'] and late.day_gan == '辛'
+    before = bazi.compute(2026, 9, 3, 22, 59)
+    assert before.sizhu == ['丙午', '丙申', '庚辰', '丁亥']
+    # 跨年夜：年柱／月柱照節氣不變，只有日柱進到次日
+    nye = bazi.compute(2024, 12, 31, 23, 30)
+    assert nye.sizhu == ['甲辰', '丙子', '庚午', '丙子'] and nye.zodiac == '龍'
+
+
 def test_rate_name_no_fate():
     c1, c2 = chars.lookup('冠'), chars.lookup('宇')
     assert c1.stroke == 9 and c2.stroke == 6 and c1.py[0] == 'guan4' and c2.py[0] == 'yu3'
