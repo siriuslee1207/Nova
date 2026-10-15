@@ -3,7 +3,7 @@ import random
 
 import pytest
 
-from nova_core import bazi, chars, generator, rating
+from nova_core import bazi, chars, generator, rating, tables
 
 pytest.importorskip('lunar_python')
 
@@ -20,14 +20,15 @@ def test_bazi_pillars_and_strength(fate):
     assert fate.fen == {'木': 0.2, '火': 3.3, '土': 1.1, '金': 2.9, '水': 0.5}
     assert fate.total == 8.0
     assert fate.qiangruo == '弱'  # 同類 金+土 = 4.0，不大於 8.0/2
-    # 平衡法（弱）：用=自身→但最弱且非日主者取代 → 木；喜=生我 土；忌=克我 火；仇=我克 木
-    assert (fate.yong, fate.xi, fate.ji, fate.chou) == ('木', '土', '火', '木')
+    # 平衡法（弱）：官殺火 3.3 最旺 → 用印 土、喜比劫 金、忌官殺 火、仇財 木（四神互不相同）
+    assert (fate.yong, fate.xi, fate.ji, fate.chou) == ('土', '金', '火', '木')
+    assert fate.note.startswith('身弱因官殺旺')
 
 
 def test_bazi_geju_and_hour_unknown():
     g = bazi.compute(2026, 9, 3, 10, 30, method='geju')
     # 月支申 主氣庚，日主庚 → 比肩，不在八正格 → 退回平衡法
-    assert g.geju is None and '比肩' in g.note and (g.yong, g.ji) == ('木', '火')
+    assert g.geju is None and '比肩' in g.note and (g.yong, g.ji) == ('土', '火')
     h = bazi.compute(2026, 9, 3)
     assert h.hour_known is False and h.sizhu[:3] == ['丙午', '丙申', '庚辰']
     assert h.fen == {'木': 0.2, '火': 2.7, '土': 1.0, '金': 1.6, '水': 0.5}
@@ -42,6 +43,48 @@ def test_bazi_late_zi_hour_counts_as_next_day():
     # 跨年夜：年柱／月柱照節氣不變，只有日柱進到次日
     nye = bazi.compute(2024, 12, 31, 23, 30)
     assert nye.sizhu == ['甲辰', '丙子', '庚午', '丙子'] and nye.zodiac == '龍'
+
+
+def test_bazi_four_gods_are_distinct():
+    # 使用者回報：2024-10-06 11:41 曾算出 用神火、仇神火（fate 的「身弱取最弱五行為用」撞上仇神）
+    f = bazi.compute(2024, 10, 6, 11, 41)
+    assert f.sizhu == ['甲辰', '癸酉', '癸卯', '戊午'] and f.day_wx == '水' and f.qiangruo == '弱'
+    assert f.fen == {'木': 2.2, '火': 0.7, '土': 1.9, '金': 1.0, '水': 2.2}
+    # 官殺土 1.9、財火 0.7、食傷木 2.2 → 食傷旺：用印 金、喜比劫 水、忌食傷 木、仇財 火
+    assert (f.yong, f.xi, f.ji, f.chou) == ('金', '水', '木', '火')
+    assert f.note.startswith('身弱因食傷旺')
+    rnd = random.Random(1)
+    for _ in range(300):
+        y, m, d = rnd.randint(1950, 2035), rnd.randint(1, 12), rnd.randint(1, 28)
+        h = rnd.choice([None, rnd.randint(0, 23)])
+        for method in bazi.METHODS:
+            g = bazi.compute(y, m, d, h, 0 if h is None else rnd.randint(0, 59), method=method)
+            assert len({g.yong, g.xi, g.ji, g.chou}) == 4, (y, m, d, h, method, g)
+            assert g.note
+
+
+def test_bazi_strong_day_master():
+    # 1980-01-15 10:00：己未 丁丑 丁亥 乙巳，日主丁火；火 2.8 + 印木 1.5 = 4.3 > 8.0/2 → 強，比劫旺
+    f = bazi.compute(1980, 1, 15, 10, 0)
+    assert f.day_wx == '火' and f.qiangruo == '強' and f.geju == '食神格'
+    assert (f.yong, f.xi, f.ji, f.chou) == ('水', '金', '火', '木')   # 用官殺 水、喜財 金、忌比劫 火、仇印 木
+    assert f.note.startswith('身強因比劫旺')
+    g = bazi.compute(1980, 1, 15, 10, 0, method='geju')              # 食神格：用財 金、喜比劫 火、忌梟印 木、仇官殺 水
+    assert (g.yong, g.xi, g.ji, g.chou) == ('金', '火', '木', '水') and g.note.startswith('食神格')
+    # 1980-04-15 10:00：庚申 庚辰 戊午 丁巳，日主戊土；土 2.1 + 印火 2.3 = 4.4 > 4.0 → 強，印旺
+    f = bazi.compute(1980, 4, 15, 10, 0)
+    assert f.day_wx == '土' and f.qiangruo == '強'
+    assert (f.yong, f.xi, f.ji, f.chou) == ('水', '金', '火', '土')   # 用財 水、喜食傷 金、忌印 火、仇比劫 土
+    assert f.note.startswith('身強因印旺')
+
+
+def test_bazi_rule_tables_are_consistent():
+    bt = tables.bazi()
+    assert set(bt['fuyi_rules']) == {'印旺', '比劫旺', '官殺旺', '財旺', '食傷旺'}
+    assert set(bt['geju_rules']) == set(bt['shishen_to_geju'].values())
+    for name, rule in {**bt['fuyi_rules'], **bt['geju_rules']}.items():
+        assert len({rule[k] for k in bazi.REL_KEYS}) == 4 and rule['why'], name
+        assert len(set(bazi.apply_rule(rule, '木'))) == 4, name
 
 
 def test_rate_name_no_fate():
@@ -59,7 +102,7 @@ def test_rate_name_no_fate():
 def test_rate_name_with_fate(fate):
     c1, c2 = chars.lookup('冠'), chars.lookup('宇')
     r = rating.rate_name(16, 0, c1, c2, fate)
-    assert r.wuxing == 77   # 冠木=用神 +12；木克土 -5
+    assert r.wuxing == 77   # 宇土=用神 +12（冠木為仇神，中性）；木克土 -5
     assert r.shengxiao == 94  # 馬火：木生火 +7、火生土 +7
     assert r.total == 86.8
 

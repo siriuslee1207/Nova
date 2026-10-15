@@ -5,6 +5,10 @@ Nova 修正：五行分數以「十分之一」整數累加（藏干權重皆為
            Python 與 JS 結果必然一致。
 Nova 新增：時辰不詳時只以年、月、日三柱計五行強弱，時柱留空。
 Nova 修正：晚子時（23:00–23:59）日柱以次日計（lunar 的 sect=1）；時柱本來就以次日日干起算，不受影響。
+Nova 修正：用、喜、忌、仇四神必互不相同。fate 原版平衡法「身弱取全盤最弱五行為用神」「身強以缺的五行為仇神」
+           會讓用神撞上忌神或仇神（例：日主木身弱而土最少 → 用神土、仇神土），改為依致強／致弱之因取用
+           （規則表 bazi_tables.json fuyi_rules）；格局法的八正格喜忌改依子平順用／逆用（geju_rules）。
+           兩張規則表都附 why 說明文字，放進 FateData.note 供畫面與 CLI 顯示。
 """
 from __future__ import annotations
 
@@ -22,6 +26,7 @@ ZHI = '子丑寅卯辰巳午未申酉戌亥'
 ZODIAC = '鼠牛虎兔龍蛇馬羊猴雞狗豬'   # 依年柱地支（立春為界），與八字一致
 ELEMENTS = '木火土金水'
 METHODS = ('balance', 'geju')
+REL_KEYS = ('yong', 'xi', 'ji', 'chou')
 
 
 @dataclass
@@ -39,8 +44,8 @@ class FateData:
     xi: str                   # 喜神
     ji: str                   # 忌神（評分 -8）
     chou: str                 # 仇神
-    geju: str | None          # 格局名（geju 法）
-    note: str                 # 例如 geju 法退回 balance 的原因
+    geju: str | None          # 格局名（月令主氣十神所定；兩種方法都會算出來供顯示）
+    note: str                 # 取用說明（規則表 why；geju 法退回平衡法時含原因）
     hidden: list[list[str]]   # 各柱藏干
 
 
@@ -75,36 +80,45 @@ def judge_strength(tenths: dict[str, int], day_wx: str) -> str:
     return '強' if mine * 2 > total else '弱'
 
 
-def balance(tenths: dict[str, int], day_wx: str, qiangruo: str) -> tuple[str, str, str, str]:
-    """平衡法（chronosfate/xiyong_balance.go）→ (用, 喜, 忌, 仇)。"""
+def relations(day_wx: str) -> dict[str, str]:
+    """日主五行 → 各十神的五行：self 比劫、sheng_wo 印、ke_wo 官殺、wo_sheng 食傷、wo_ke 財。"""
     bt = _bt()
+    return {'self': day_wx, 'sheng_wo': bt['sheng_wo'][day_wx], 'ke_wo': bt['ke_wo'][day_wx],
+            'wo_sheng': bt['sheng'][day_wx], 'wo_ke': bt['ke'][day_wx]}
+
+
+def apply_rule(rule: dict, day_wx: str) -> tuple[str, str, str, str]:
+    """規則表的一列（十神關係名）→ (用, 喜, 忌, 仇) 五行。"""
+    rel = relations(day_wx)
+    return tuple(rel[rule[k]] for k in REL_KEYS)
+
+
+def balance(tenths: dict[str, int], day_wx: str, qiangruo: str) -> tuple[str, str, str, str, str]:
+    """平衡法（扶抑）→ (用, 喜, 忌, 仇, 說明)。
+    身強：忌＝印、比劫中較旺者（致強之因），仇＝另一者；印旺→用財破印、喜食傷；比劫旺→用官殺制身、喜財。
+    身弱：忌＝官殺、財、食傷中最旺者（致弱之因，同分依此序）；官殺旺／食傷旺→用印、喜比劫、仇財；財旺→用比劫、喜印、仇食傷。
+    規則表：bazi_tables.json fuyi_rules。"""
+    rel = relations(day_wx)
     if qiangruo == '強':
-        yong, xi, ji, chou = bt['ke_wo'][day_wx], bt['sheng'][day_wx], day_wx, bt['sheng_wo'][day_wx]
+        cause = '印旺' if tenths[rel['sheng_wo']] > tenths[rel['self']] else '比劫旺'
     else:
-        yong, xi, ji, chou = day_wx, bt['sheng_wo'][day_wx], bt['ke_wo'][day_wx], bt['ke'][day_wx]
-    weakest = min(ELEMENTS, key=lambda e: tenths[e])         # 木火土金水 序中第一個最小者
-    if qiangruo == '弱' and weakest != day_wx:
-        yong = weakest
-    xian = next((e for e in ELEMENTS if tenths[e] == 0), '')  # 缺的五行
-    if xian and qiangruo == '強':
-        chou = xian
-    return yong, xi, ji, chou
+        drains = (('官殺旺', rel['ke_wo']), ('財旺', rel['wo_ke']), ('食傷旺', rel['wo_sheng']))
+        cause = max(drains, key=lambda d: tenths[d[1]])[0]   # max 取序中第一個最大者
+    rule = _bt()['fuyi_rules'][cause]
+    return (*apply_rule(rule, day_wx), rule['why'])
 
 
-def geju(pillars: list[str], day_gan: str) -> tuple[str | None, tuple[str, str, str, str] | None, str]:
-    """格局法（chronosfate/xiyong_geju.go）：月令主氣 → 十神 → 八正格 → (用, 喜, 忌, 仇)。
-    比肩/劫財 月令不在八正格內 → 回 (None, None, 十神)。"""
+def geju(pillars: list[str], day_gan: str) -> tuple[str | None, tuple[str, str, str, str] | None, str, str]:
+    """格局法：月令主氣 → 十神 → 八正格 → (格名, (用, 喜, 忌, 仇), 十神, 說明)。
+    比肩/劫財 月令不在八正格內 → (None, None, 十神, '')。規則表：bazi_tables.json geju_rules。"""
     bt = _bt()
     main_qi = bt['hidden_stems'][pillars[1][1]][0][0]
     ss = bt['shishen'][day_gan][main_qi]
     name = bt['shishen_to_geju'].get(ss)
     if not name:
-        return None, None, ss
-    day_wx = bt['tiangan_wuxing'][day_gan]
-    rel = {'self': day_wx, 'sheng_wo': bt['sheng_wo'][day_wx], 'ke_wo': bt['ke_wo'][day_wx],
-           'wo_sheng': bt['sheng'][day_wx], 'wo_ke': bt['ke'][day_wx]}
+        return None, None, ss, ''
     rule = bt['geju_rules'][name]
-    return name, tuple(rel[rule[k]] for k in ('yong', 'xi', 'ji', 'chou')), ss
+    return name, apply_rule(rule, bt['tiangan_wuxing'][day_gan]), ss, rule['why']
 
 
 def compute(year: int, month: int, day: int, hour: int | None = None, minute: int = 0,
@@ -124,14 +138,14 @@ def compute(year: int, month: int, day: int, hour: int | None = None, minute: in
     total = sum(tenths[e] for e in ELEMENTS) / 10
     qiangruo = judge_strength(tenths, day_wx)
     zodiac = ZODIAC[ZHI.index(pillars[0][1])]
-    yong, xi, ji, chou = balance(tenths, day_wx, qiangruo)
-    gname, gelems, ss = geju(pillars, day_gan)
-    note = ''
+    yong, xi, ji, chou, note = balance(tenths, day_wx, qiangruo)
+    gname, gelems, ss, gwhy = geju(pillars, day_gan)
     if method == 'geju':
         if gelems:
             yong, xi, ji, chou = gelems
+            note = gwhy
         else:
-            note = f'月令主氣十神為{ss}，不在八正格內，改用平衡法'
+            note = f'月令主氣十神為{ss}，不在八正格內，改用平衡法：{note}'
     hidden = [[s for s, _ in bt['hidden_stems'][gz[1]]] if gz else [] for gz in pillars]
     return FateData(pillars, hour_known, day_gan, day_wx, zodiac, fen, total, qiangruo,
                     method, yong, xi, ji, chou, gname, note, hidden)

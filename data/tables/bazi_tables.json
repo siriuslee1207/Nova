@@ -315,52 +315,97 @@
  },
  "geju_rules": {
   "正官格": {
-   "yong": "self",
+   "yong": "wo_ke",
    "xi": "sheng_wo",
-   "ji": "ke_wo",
-   "chou": "wo_ke"
+   "ji": "wo_sheng",
+   "chou": "self",
+   "why": "正官格：用財生官、喜印護官；忌食傷剋官、仇比劫生傷奪財"
   },
   "七殺格": {
-   "yong": "ke_wo",
-   "xi": "self",
-   "ji": "sheng_wo",
-   "chou": "wo_sheng"
+   "yong": "wo_sheng",
+   "xi": "sheng_wo",
+   "ji": "ke_wo",
+   "chou": "wo_ke",
+   "why": "七殺格：用食神制殺、喜印化殺；忌七殺攻身、仇財生殺"
   },
   "正財格": {
    "yong": "wo_sheng",
-   "xi": "self",
-   "ji": "ke_wo",
-   "chou": "sheng_wo"
+   "xi": "ke_wo",
+   "ji": "self",
+   "chou": "sheng_wo",
+   "why": "財格：用食傷生財、喜官殺護財；忌比劫奪財、仇印生比劫"
   },
   "偏財格": {
    "yong": "wo_sheng",
-   "xi": "self",
-   "ji": "ke_wo",
-   "chou": "sheng_wo"
+   "xi": "ke_wo",
+   "ji": "self",
+   "chou": "sheng_wo",
+   "why": "財格：用食傷生財、喜官殺護財；忌比劫奪財、仇印生比劫"
   },
   "正印格": {
-   "yong": "sheng_wo",
+   "yong": "ke_wo",
    "xi": "self",
    "ji": "wo_ke",
-   "chou": "wo_sheng"
+   "chou": "wo_sheng",
+   "why": "印格：用官殺生印、喜比劫承印；忌財破印、仇食傷生財"
   },
   "偏印格": {
-   "yong": "sheng_wo",
+   "yong": "ke_wo",
    "xi": "self",
    "ji": "wo_ke",
-   "chou": "wo_sheng"
+   "chou": "wo_sheng",
+   "why": "印格：用官殺生印、喜比劫承印；忌財破印、仇食傷生財"
   },
   "食神格": {
-   "yong": "wo_sheng",
-   "xi": "sheng_wo",
-   "ji": "ke_wo",
-   "chou": "self"
+   "yong": "wo_ke",
+   "xi": "self",
+   "ji": "sheng_wo",
+   "chou": "ke_wo",
+   "why": "食神格：用財承食神所生、喜比劫生食；忌梟印奪食、仇官殺生印"
   },
   "傷官格": {
    "yong": "wo_ke",
    "xi": "sheng_wo",
+   "ji": "ke_wo",
+   "chou": "self",
+   "why": "傷官格：用財（傷官生財）、喜印（傷官佩印）；忌官（傷官見官）、仇比劫奪財"
+  }
+ },
+ "fuyi_rules": {
+  "印旺": {
+   "yong": "wo_ke",
+   "xi": "wo_sheng",
+   "ji": "sheng_wo",
+   "chou": "self",
+   "why": "身強因印旺：用財破印、喜食傷洩身生財；忌印、仇比劫"
+  },
+  "比劫旺": {
+   "yong": "ke_wo",
+   "xi": "wo_ke",
    "ji": "self",
-   "chou": "wo_sheng"
+   "chou": "sheng_wo",
+   "why": "身強因比劫旺：用官殺制身、喜財生官耗身；忌比劫、仇印"
+  },
+  "官殺旺": {
+   "yong": "sheng_wo",
+   "xi": "self",
+   "ji": "ke_wo",
+   "chou": "wo_ke",
+   "why": "身弱因官殺旺：用印化殺生身、喜比劫幫身；忌官殺、仇財（生殺破印）"
+  },
+  "財旺": {
+   "yong": "self",
+   "xi": "sheng_wo",
+   "ji": "wo_ke",
+   "chou": "wo_sheng",
+   "why": "身弱因財旺：用比劫分財幫身、喜印生身；忌財、仇食傷（生財洩身）"
+  },
+  "食傷旺": {
+   "yong": "sheng_wo",
+   "xi": "self",
+   "ji": "wo_sheng",
+   "chou": "wo_ke",
+   "why": "身弱因食傷旺：用印制食傷生身、喜比劫幫身；忌食傷、仇財（洩食傷破印）"
   }
  },
  "shishen_to_geju": {

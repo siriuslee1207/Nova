@@ -25,7 +25,7 @@ def test_render_template_and_num():
 def test_build_recommend_prompt(req):
     assert '## 合格筆畫組合' in req.user and '## 候選字池' in req.user and '喜歡自然意象' in req.user
     assert '姓氏：陳（姓名學筆畫 16）' in req.user and '性別：女' in req.user
-    assert '用神 木、喜神 土、忌神 火、仇神 木；生肖 馬' in req.user
+    assert '用神 土、喜神 金、忌神 火、仇神 木；生肖 馬' in req.user
     assert len(req.top_combos) <= advisor.MAX_COMBOS
     assert all(len(v) <= advisor.MAX_PER_STROKE for v in req.allowed.values())
     assert req.combo_set == {(c.f1, c.f2) for c in req.top_combos}

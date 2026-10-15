@@ -146,17 +146,42 @@ def build_bazi_tables() -> dict:
     ke = {'木': '土', '火': '金', '土': '水', '金': '木', '水': '火'}      # 我克
     sheng_wo = {v: k for k, v in sheng.items()}                            # 生我
     ke_wo = {v: k for k, v in ke.items()}                                  # 克我
-    # 格局 → 用/喜/忌/仇 as relations to 日主 (chronosfate/xiyong_geju.go)
+    # 八正格 → 用/喜/忌/仇（相對日主的十神：self 比劫、sheng_wo 印、ke_wo 官殺、wo_sheng 食傷、wo_ke 財）。
+    # Nova 改寫：fate（chronosfate/xiyong_geju.go）的表與子平理論相悖（正官格以官殺為忌、財為仇；食神格以印為喜…），
+    # 改依順用／逆用：正官喜財印忌傷官、七殺用食制殺、財格忌比劫、印格忌財、食神忌梟印、傷官忌見官。
+    # 四神必互不相同；why 供畫面與 CLI 說明。
+    cai_ge = {'yong': 'wo_sheng', 'xi': 'ke_wo', 'ji': 'self', 'chou': 'sheng_wo',
+              'why': '財格：用食傷生財、喜官殺護財；忌比劫奪財、仇印生比劫'}
+    yin_ge = {'yong': 'ke_wo', 'xi': 'self', 'ji': 'wo_ke', 'chou': 'wo_sheng',
+              'why': '印格：用官殺生印、喜比劫承印；忌財破印、仇食傷生財'}
     geju_rules = {
-        '正官格': {'yong': 'self', 'xi': 'sheng_wo', 'ji': 'ke_wo', 'chou': 'wo_ke'},
-        '七殺格': {'yong': 'ke_wo', 'xi': 'self', 'ji': 'sheng_wo', 'chou': 'wo_sheng'},
-        '正財格': {'yong': 'wo_sheng', 'xi': 'self', 'ji': 'ke_wo', 'chou': 'sheng_wo'},
-        '偏財格': {'yong': 'wo_sheng', 'xi': 'self', 'ji': 'ke_wo', 'chou': 'sheng_wo'},
-        '正印格': {'yong': 'sheng_wo', 'xi': 'self', 'ji': 'wo_ke', 'chou': 'wo_sheng'},
-        '偏印格': {'yong': 'sheng_wo', 'xi': 'self', 'ji': 'wo_ke', 'chou': 'wo_sheng'},
-        '食神格': {'yong': 'wo_sheng', 'xi': 'sheng_wo', 'ji': 'ke_wo', 'chou': 'self'},
-        '傷官格': {'yong': 'wo_ke', 'xi': 'sheng_wo', 'ji': 'self', 'chou': 'wo_sheng'},
+        '正官格': {'yong': 'wo_ke', 'xi': 'sheng_wo', 'ji': 'wo_sheng', 'chou': 'self',
+                   'why': '正官格：用財生官、喜印護官；忌食傷剋官、仇比劫生傷奪財'},
+        '七殺格': {'yong': 'wo_sheng', 'xi': 'sheng_wo', 'ji': 'ke_wo', 'chou': 'wo_ke',
+                   'why': '七殺格：用食神制殺、喜印化殺；忌七殺攻身、仇財生殺'},
+        '正財格': dict(cai_ge), '偏財格': dict(cai_ge),
+        '正印格': dict(yin_ge), '偏印格': dict(yin_ge),
+        '食神格': {'yong': 'wo_ke', 'xi': 'self', 'ji': 'sheng_wo', 'chou': 'ke_wo',
+                   'why': '食神格：用財承食神所生、喜比劫生食；忌梟印奪食、仇官殺生印'},
+        '傷官格': {'yong': 'wo_ke', 'xi': 'sheng_wo', 'ji': 'ke_wo', 'chou': 'self',
+                   'why': '傷官格：用財（傷官生財）、喜印（傷官佩印）；忌官（傷官見官）、仇比劫奪財'},
     }
+    # 平衡法（扶抑）：依致強／致弱之因取用，四神互不相同（Nova 新增，取代 fate xiyong_balance.go 的
+    # 「身弱取全盤最弱五行為用」「身強以缺的五行為仇」——那兩條會算出用神＝忌神或仇神）
+    fuyi_rules = {
+        '印旺': {'yong': 'wo_ke', 'xi': 'wo_sheng', 'ji': 'sheng_wo', 'chou': 'self',
+                 'why': '身強因印旺：用財破印、喜食傷洩身生財；忌印、仇比劫'},
+        '比劫旺': {'yong': 'ke_wo', 'xi': 'wo_ke', 'ji': 'self', 'chou': 'sheng_wo',
+                  'why': '身強因比劫旺：用官殺制身、喜財生官耗身；忌比劫、仇印'},
+        '官殺旺': {'yong': 'sheng_wo', 'xi': 'self', 'ji': 'ke_wo', 'chou': 'wo_ke',
+                  'why': '身弱因官殺旺：用印化殺生身、喜比劫幫身；忌官殺、仇財（生殺破印）'},
+        '財旺': {'yong': 'self', 'xi': 'sheng_wo', 'ji': 'wo_ke', 'chou': 'wo_sheng',
+                 'why': '身弱因財旺：用比劫分財幫身、喜印生身；忌財、仇食傷（生財洩身）'},
+        '食傷旺': {'yong': 'sheng_wo', 'xi': 'self', 'ji': 'wo_sheng', 'chou': 'wo_ke',
+                  'why': '身弱因食傷旺：用印制食傷生身、喜比劫幫身；忌食傷、仇財（洩食傷破印）'},
+    }
+    for name, rule in {**geju_rules, **fuyi_rules}.items():
+        assert len({rule[k] for k in ('yong', 'xi', 'ji', 'chou')}) == 4, name
     shishen_to_geju = {'正官': '正官格', '七殺': '七殺格', '偏官': '七殺格', '正財': '正財格',
                        '偏財': '偏財格', '正印': '正印格', '偏印': '偏印格', '食神': '食神格', '傷官': '傷官格'}
     yangren = {'甲': '卯', '乙': '寅', '丙': '午', '丁': '巳', '戊': '午', '己': '巳',
@@ -168,7 +193,7 @@ def build_bazi_tables() -> dict:
     return {
         'tiangan_wuxing': tiangan_wuxing, 'dizhi_wuxing': dizhi_wuxing, 'hidden_stems': hidden_stems,
         'shishen': shishen, 'sheng': sheng, 'ke': ke, 'sheng_wo': sheng_wo, 'ke_wo': ke_wo,
-        'geju_rules': geju_rules, 'shishen_to_geju': shishen_to_geju, 'yangren': yangren,
+        'geju_rules': geju_rules, 'fuyi_rules': fuyi_rules, 'shishen_to_geju': shishen_to_geju, 'yangren': yangren,
         'tiaohou': tiaohou, 'zodiac_wuxing': zodiac_wuxing,
     }
 
